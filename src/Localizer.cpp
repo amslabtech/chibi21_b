@@ -24,7 +24,9 @@ void Localizer::odometry_callback(const nav_msgs::Odometry::ConstPtr &msg)
 }
 void Localizer::process()
 {
-    ;
+    while(ros::ok()){
+        ;
+    }
 }
 Localizer::Particle::Particle()
 {
