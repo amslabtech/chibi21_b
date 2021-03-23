@@ -33,6 +33,7 @@ class AStarPath
 
 
         //parameter
+        int hz;
         //mapを2次元にする
         int row;
         int col;

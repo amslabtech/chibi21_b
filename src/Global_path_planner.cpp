@@ -1,7 +1,9 @@
 #include "Global_path_planner/Global_path_planner.h"
 
-AStarPath::AStarPath():private_nh
-{//paramきめたらそれ書く
+AStarPath::AStarPath():private_nh("")
+{
+    //paramきめたらそれ書く
+    private_nh.param("hz",hz,{10});
     private_nh.param("map_checker",map_checker,{false});
 
 }
@@ -17,7 +19,7 @@ void AStarPath::map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
         col = the_map.info.width;
         map_grid = std::vector<std::vector<int>>(row,std::vector<int>(col,0));
 
-        for(int i=0;i<row,i++)
+        for(int i=0;i<row;i++)
         {
             for(int j=0;j<col;j++)
             {
@@ -26,12 +28,12 @@ void AStarPath::map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
         }
 
         map_checker = true;
-        std::cout<<"map_grid"std::<<endl;
+        std::cout<<"map_grid"<<std::endl;
     }
 
 }
 
-void thick_wall()
+void AStarPath::thick_wall()
 {
     for(int i=0;i<row;i++)
     {
@@ -43,24 +45,24 @@ void thick_wall()
 
 }
 
-void set_goal()
+void AStarPath::set_goal()
 {
 
 }
 
-void make_heuristic()
+void AStarPath::make_heuristic()
 {
 
 }
 
-void A_star()
+void AStarPath::A_star()
 {
 
 }
 
-void AStarPath::process
+void AStarPath::process()
 {
-    ros::Rate loop_rate(Hz);
+    ros::Rate loop_rate(hz);
     while(ros::ok())
     {
         if(map_checker)
@@ -71,12 +73,12 @@ void AStarPath::process
 
 }
 
-int main(int argc,char **argv)
+int main(int argc,char** argv)
 {
-    ros::init(int argc,argv,"Global_path_planner");
-    AStarPath astarpath
-    std::cout<<"Global_path_planner will begin"std::endl;
-    astarpath process;
+    ros::init(argc,argv,"Global_path_planner");
+    AStarPath astarpath;
+    std::cout<<"Global_path_planner will begin"<<std::endl;
+    astarpath.process();
     return 0;
 
 }
