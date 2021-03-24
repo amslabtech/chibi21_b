@@ -3,6 +3,7 @@
 <launch>
 
     <arg name="map_file" default="$(find chibi21_b)/map/map.yaml"/>
+    <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen"/>
     <node pkg="chibi21_b" type="Global_path_planner" name="Global_path_planner" output="screen">
     </node>
 </launch>
