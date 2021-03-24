@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="map_file" default="$(find chibi21_b)/map/map.yaml"/>
+    <node pkg="chibi21_b" type="Global_path_planner" name="Global_path_planner" output="screen">
+    </node>
+</launch>
