@@ -10,24 +10,46 @@
 #include<geometry_msgs/PoseStamped.h>
 #include<geometry_msgs/PoseArray.h>
 #include<nav_msgs/OccupancyGrid.h>
-
-
+#include<random>
+#include<tf/tf.h>
 class Localizer
 {
     public:
         Localizer();
         void process();
     private:
-        void laser_callback(const sensor_msgs::LaserScan::ConstPtr &msg);
-        void odometry_callback(const nav_msgs::Odometry::ConstPtr &msg);
-        void map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
-
         class Particle
         {
             public:
-                Particle();
+                Particle(Localizer* localizer);
+                geometry_msgs::PoseStamped p_pose;
+
             private:
+                int p_pose_to_map_index(geometry_msgs::PoseStamped p_pose);
+                void set_p(double x, double y, double yaw, double x_sigma, double y_sigma, double yaw_sigma);
+
+                Localizer* mcl;
+                ros::NodeHandle private_nh;
         };
+        void laser_callback(const sensor_msgs::LaserScan::ConstPtr &msg);
+
+        void odometry_callback(const nav_msgs::Odometry::ConstPtr &msg);
+        void map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
+
+        Particle make_particle();
+        double gaussian(double mu, double sigma);
+        void create_p_pose_array_from_p_array(std::vector<Particle> p_array);
+
+        int hz;
+        int particle_number;
+        double init_x;
+        double init_y;
+        double init_yaw;
+        double init_x_sigma;
+        double init_y_sigma;
+        double init_yaw_sigma;
+
+        bool map_get_ok = false;
 
         ros::NodeHandle private_nh;
         ros::NodeHandle nh;
@@ -35,12 +57,15 @@ class Localizer
         ros::Subscriber laser_sub;
         ros::Subscriber odometry_sub;
         ros::Publisher mcl_pose_pub;
+        ros::Publisher p_pose_array_pub;
+
 
         nav_msgs::OccupancyGrid map;
         sensor_msgs::LaserScan laser;
         nav_msgs::Odometry odometry;
-
-
+        geometry_msgs::PoseStamped mcl_pose;
+        geometry_msgs::PoseArray p_pose_array;
+        std::vector<Particle> p_array;
 
 };
 #endif
