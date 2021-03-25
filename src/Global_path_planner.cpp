@@ -5,8 +5,10 @@ AStarPath::AStarPath():private_nh("")
     //paramきめたらそれ書く
     private_nh.param("hz",hz,{10});
     private_nh.param("map_checker",map_checker,{false});
+    private_nh.param("wall_checker",wall_checker,{false});
     sub_map = nh.subscribe("/map",10,&AStarPath::map_callback,this);
     pub_map = nh.advertise<nav_msgs::OccupancyGrid>("/map",1);
+    pub_path = nh.advertise<nav_msgs::Path>("/path",1);
 
 }
 
@@ -48,32 +50,59 @@ void AStarPath::thick_wall()
             for(int j=0;j<col;j++)
             {
                 map_grid_copy[i][j] = map_grid[i][j];
+             /*   if(map_grid[i][j]==100)
+                {
+                    std::cout<<map_grid_copy[i][j];
+                    std::cout<<",";
+                }*/
             }
+           // std::cout<<std::endl;
         }
 
 
-        for(int i=1;i<row-1;i++)
+        int count = 0;
+
+        for(int i=5;i<row-5;i++)
         {
-            for(int j=1;j<col-1;j++)
+            for(int j=5;j<col-5;j++)
             {
-                if(map_grid[i][j]==100)
+                if(map_grid_copy[i][j]==100)
                 {
-                    map_grid_copy[i+1][j]==100;
-                    map_grid_copy[i][j+1]==100;
-                    map_grid_copy[i+1][j+1]==100;
+                    map_grid[i+1][j]=100;
+                    map_grid[i+1][j+1]=100;
+                    map_grid[i+1][j+2]=100;
+                    map_grid[i][j+1]=100;
+                    map_grid[i][j+2]=100;
+                    map_grid[i+2][j]=100;
+                    map_grid[i+2][j+1]=100;
+                    map_grid[i+2][j+2]=100;
+                    map_grid[i+3][j]=100;
+                    map_grid[i+3][j+2]=100;
+                    map_grid[i+3][j+3]=100;
+                    map_grid[i+4][j]=100;
+                    map_grid[i+4][j+2]=100;
+                    map_grid[i+4][j+3]=100;
+                    map_grid[i+4][j+4]=100;
+
+                    map_grid[i][j-1]=100;
+                    map_grid[i][j-2]=100;
+                    map_grid[i][j-3]=100;
+
+                    std::cout<<"wo!"<<std::endl;
+                    count += 1;
                 }
 
             }
         }
         //map_grid = map_grid_copy;
 
-        for(int i=0;i<row;i++)
+        /*for(int i=0;i<row;i++)
         {
             for(int j=0;j<col;j++)
             {
                 map_grid[i][j] = map_grid_copy[i][j];
             }
-        }
+        }*/
 
 
         for(int i=0;i<row;i++)
@@ -83,6 +112,11 @@ void AStarPath::thick_wall()
                 the_map.data[j+i*row] = map_grid[i][j];
             }
         }
+
+        std::cout<<"wall"<<std::endl;
+        std::cout<<count<<std::endl;
+
+
 
 
         pub_map.publish(the_map);
@@ -141,9 +175,9 @@ void AStarPath::process()
     {
         if(map_checker)
         {
-            std::cout<<"ok1"<<std::endl;
+            //std::cout<<"ok1"<<std::endl;
             thick_wall();
-            std::cout<<"ok2"<<std::endl;
+            //std::cout<<"ok2"<<std::endl;
 
         }
         else
