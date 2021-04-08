@@ -49,6 +49,7 @@ void Localizer::map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
     ROS_INFO("map get");
     for(int i=0; i<particle_number; i++){
         Particle p = make_particle();
+        p_array.push_back(p);
     }
     ROS_INFO("make particles");
     //create_p_pose_array_from_p_array(p_array);
@@ -61,7 +62,7 @@ void Localizer::odometry_callback(const nav_msgs::Odometry::ConstPtr &msg)
         current_odometry = *msg;
         if(!odometry_get_ok){previous_odometry = current_odometry;}
         motion_update();
-        estimate_pose();
+        //estimate_pose();
         odometry_get_ok = true;
     }
 }
@@ -69,7 +70,6 @@ void Localizer::odometry_callback(const nav_msgs::Odometry::ConstPtr &msg)
 Localizer::Particle Localizer::make_particle()
 {
     Particle p(this);
-    p_array.push_back(p);
     return p;
 }
 
@@ -177,10 +177,10 @@ void Localizer::resampling_particle()
     double r = random(engine);
     int index = 0;
     double reset_ratio = 1 - (alpha_fast / alpha_slow);
-    //  std::cout << "reset_ratio " << reset_ratio << std::endl;
+    std::cout << "reset_ratio " << reset_ratio << std::endl;
     std::vector<Particle> p_array_after_resampling;
     while(p_array_after_resampling.size() < p_array.size()){
-        r += random(engine) / p_array.size();
+        r += 1 / p_array.size();
         if(random(engine) > reset_ratio){
             //r += random(engine) / p_array.size();
             while(r > p_array.at(index).w){
