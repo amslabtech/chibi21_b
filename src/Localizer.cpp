@@ -19,6 +19,14 @@ Localizer::Localizer():private_nh("~")
     private_nh.getParam("reset_x_sigma", reset_x_sigma);
     private_nh.getParam("reset_y_sigma", reset_y_sigma);
     private_nh.getParam("reset_yaw_sigma", reset_yaw_sigma);
+    private_nh.getParam("expansion_x_speed", expansion_x_speed);
+    private_nh.getParam("expansion_y_speed", expansion_y_speed);
+    private_nh.getParam("expansion_yaw_speed", expansion_yaw_speed);
+    private_nh.getParam("alpha_th", alpha_th);
+    private_nh.getParam("reset_limit", reset_limit);
+    private_nh.getParam("simple_reset_x_sigma", simple_reset_x_sigma);
+    private_nh.getParam("simple_reset_y_sigma", simple_reset_y_sigma);
+    private_nh.getParam("simple_reset_yaw_sigma", simple_reset_yaw_sigma);
 
 
     map_sub = nh.subscribe("/map", 100, &Localizer::map_callback, this);
@@ -52,7 +60,6 @@ void Localizer::map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
         p_array.push_back(p);
     }
     ROS_INFO("make particles");
-    //create_p_pose_array_from_p_array(p_array);
 }
 
 void Localizer::odometry_callback(const nav_msgs::Odometry::ConstPtr &msg)
@@ -147,11 +154,11 @@ double Localizer::dist_from_p_to_wall(double x, double y, double yaw)
                 return dist_from_start;
             }
             if(map.data[map_index] == -1){
-                return search_range;
+                return search_range * 2;
             }
         }
         else{
-            return search_range;
+            return search_range * 2;
         }
     }
     return search_range;
@@ -168,7 +175,57 @@ void Localizer::normalize_w()
     }
 }
 
-void Localizer::resampling_particle()
+void Localizer::adaptive_resampling()
+{
+    //normalize_w();
+    std::default_random_engine engine(seed());
+    std::uniform_real_distribution<> random(0.0, 1.0);
+
+    double r = random(engine);
+    int index = 0;
+    double reset_ratio = 1 - (alpha_fast / alpha_slow);
+    //std::cout << "reset_ratio " << reset_ratio << std::endl;
+    std::vector<Particle> p_array_after_resampling;
+    while(p_array_after_resampling.size() < p_array.size()){
+        r += 1 / p_array.size();
+            //r += random(engine) / p_array.size();
+        while(r > p_array.at(index).w){
+            r -= p_array.at(index).w;
+            index = (index + 1) % p_array.size();
+        }
+        if(random(engine) > reset_ratio){
+            Particle p = p_array.at(index);
+            p.w = 1.0 / p_array.size();
+            p_array_after_resampling.push_back(p);
+        }
+        else{
+            Particle p = p_array.at(index);
+            //p.set_p(mcl_pose.pose.position.x, mcl_pose.pose.position.y, create_yaw_from_msg(mcl_pose.pose.orientation), reset_x_sigma, reset_y_sigma, reset_yaw_sigma);
+            p.w = 1.0 / (double)p_array.size();
+            /*
+            double new_x = gaussian(p.p_pose.pose.position.x, 0.01 * expansion_x_speed);
+            double new_y = gaussian(p.p_pose.pose.position.y, 0.01 * expansion_y_speed);
+            double new_yaw = create_yaw_from_msg(p.p_pose.pose.orientation);
+            new_yaw += gaussian(0.0, 0.01 * expansion_yaw_speed);
+            new_yaw = adjust_yaw(new_yaw);
+            */
+            double new_x = gaussian(mcl_pose.pose.position.x, reset_x_sigma);
+            double new_y = gaussian(mcl_pose.pose.position.y, reset_y_sigma);
+            double new_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
+            new_yaw += gaussian(0.0, reset_yaw_sigma);
+            new_yaw = adjust_yaw(new_yaw);
+
+            p.p_pose.pose.position.x = new_x;
+            p.p_pose.pose.position.y = new_y;
+            quaternionTFToMsg(tf::createQuaternionFromYaw(new_yaw),p.p_pose.pose.orientation);
+            p_array_after_resampling.push_back(p);
+        }
+    }
+    p_array = p_array_after_resampling;
+}
+
+
+void Localizer::normal_resampling()
 {
     normalize_w();
     std::default_random_engine engine(seed());
@@ -177,34 +234,64 @@ void Localizer::resampling_particle()
     double r = random(engine);
     int index = 0;
     double reset_ratio = 1 - (alpha_fast / alpha_slow);
-    std::cout << "reset_ratio " << reset_ratio << std::endl;
+    //std::cout << "reset_ratio " << reset_ratio << std::endl;
     std::vector<Particle> p_array_after_resampling;
     while(p_array_after_resampling.size() < p_array.size()){
         r += 1 / p_array.size();
-        if(random(engine) > reset_ratio){
             //r += random(engine) / p_array.size();
-            while(r > p_array.at(index).w){
-                r -= p_array.at(index).w;
-                index = (index + 1) % p_array.size();
-            }
-            p_array_after_resampling.push_back(p_array.at(index));
-            p_array_after_resampling.back().w = 1.0 / p_array.size();
+        while(r > p_array.at(index).w){
+            r -= p_array.at(index).w;
+            index = (index + 1) % p_array.size();
         }
-        else{
-            Particle p = make_particle();
-            p.set_p(mcl_pose.pose.position.x, mcl_pose.pose.position.y, create_yaw_from_msg(mcl_pose.pose.orientation), reset_x_sigma, reset_y_sigma, reset_yaw_sigma);
-            p.w = 1.0 / (double)p_array.size();
-            p_array_after_resampling.push_back(p);
-        }
+        Particle p = p_array.at(index);
+        p.w = 1.0 / p_array.size();
+        p_array_after_resampling.push_back(p);
     }
     p_array = p_array_after_resampling;
+    //std::cout << "resampling" << std::endl;
 }
+
+void Localizer::expansion_reset()
+{
+    for(int i=0; i<p_array.size(); i++){
+        double new_x = gaussian(p_array.at(i).p_pose.pose.position.x, 0.01 * expansion_x_speed);
+        double new_y = gaussian(p_array.at(i).p_pose.pose.position.y, 0.01 * expansion_y_speed);
+        double new_yaw = create_yaw_from_msg(p_array.at(i).p_pose.pose.orientation);
+        new_yaw += gaussian(0.0, 0.01 * expansion_yaw_speed);
+        new_yaw = adjust_yaw(new_yaw);
+
+        p_array.at(i).p_pose.pose.position.x = new_x;
+        p_array.at(i).p_pose.pose.position.y = new_y;
+        quaternionTFToMsg(tf::createQuaternionFromYaw(new_yaw),p_array.at(i).p_pose.pose.orientation);
+    }
+    //std::cout << "reset" << std::endl;
+}
+
+void Localizer::simple_reset()
+{
+    for(int i=0; i<p_array.size(); i++){
+        double new_x = gaussian(mcl_pose.pose.position.x, simple_reset_x_sigma);
+        double new_y = gaussian(mcl_pose.pose.position.y, simple_reset_y_sigma);
+        double new_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
+        new_yaw += gaussian(0.0, simple_reset_yaw_sigma);
+        new_yaw = adjust_yaw(new_yaw);
+
+        p_array.at(i).p_pose.pose.position.x = new_x;
+        p_array.at(i).p_pose.pose.position.y = new_y;
+        quaternionTFToMsg(tf::createQuaternionFromYaw(new_yaw),p_array.at(i).p_pose.pose.orientation);
+    }
+}
+
 void Localizer::observation_update()
 {
     for(int i=0; i<p_array.size(); i++){
-        double w = p_array.at(i).calc_w();
+        double weight = calc_w(p_array.at(i).p_pose);
+        p_array.at(i).w = weight;
     }
     estimate_pose();
+    double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / step_count);
+    std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
+    //resampling_particle();
     if(alpha_slow == 0){
         alpha_slow = alpha;
     }
@@ -217,12 +304,19 @@ void Localizer::observation_update()
     else{
         alpha_fast += alpha_fast_th * (alpha - alpha_fast);
     }
-    /*
-    for(int i=0; i<p_array.size(); i++){
-        std::cout << "p[" << i << "].w" << p_array.at(i).w << std::endl;
+
+    if(estimated_pose_w > alpha_th){
+        reset_count = 0;
+        adaptive_resampling();
     }
-    */
-    resampling_particle();
+    else if(reset_count > reset_limit){
+        reset_count = 0;
+        simple_reset();
+    }
+    else{
+        reset_count += 1;
+        expansion_reset();
+    }
 
 }
 
@@ -232,10 +326,15 @@ void Localizer::estimate_pose()
     double x = 0;
     double y = 0;
     double yaw = 0;
+    double w_max = 0;
     for(int i=0; i<p_array.size(); i++){
         x += p_array.at(i).p_pose.pose.position.x * p_array.at(i).w;
         y += p_array.at(i).p_pose.pose.position.y * p_array.at(i).w;
-        yaw += create_yaw_from_msg(p_array.at(i).p_pose.pose.orientation) * p_array.at(i).w;
+        //yaw += create_yaw_from_msg(p_array.at(i).p_pose.pose.orientation) * p_array.at(i).w;
+        if(p_array.at(i).w > w_max){
+            w_max = p_array.at(i).w;
+            yaw = create_yaw_from_msg(p_array.at(i).p_pose.pose.orientation);
+        }
     }
     yaw = adjust_yaw(yaw);
 
@@ -268,7 +367,8 @@ void Localizer::Particle::set_p(double x, double y, double yaw, double x_sigma, 
     do{
         p_pose.pose.position.x = mcl->gaussian(x, x_sigma);
         p_pose.pose.position.y = mcl->gaussian(y, y_sigma);
-        quaternionTFToMsg(tf::createQuaternionFromYaw(mcl->gaussian(yaw,yaw_sigma)),p_pose.pose.orientation);
+        yaw = mcl->adjust_yaw(mcl->gaussian(yaw, yaw_sigma));
+        quaternionTFToMsg(tf::createQuaternionFromYaw(yaw),p_pose.pose.orientation);
     }while(mcl->map.data[mcl->xy_to_map_index(p_pose.pose.position.x, p_pose.pose.position.y)] != 0);
 }
 
@@ -301,14 +401,15 @@ void Localizer::Particle::p_move(double dtrans, double drot1, double drot2)
 
 }
 
-double Localizer::Particle::calc_w()
+double Localizer::calc_w(geometry_msgs::PoseStamped pose)
 {
-    for(int i=0; i<mcl->laser.ranges.size(); i+=mcl->step_count){
-        double angle = i * mcl->laser.angle_increment + mcl->laser.angle_min;
-        double dist_to_wall = mcl->dist_from_p_to_wall(p_pose.pose.position.x, p_pose.pose.position.y, mcl->create_yaw_from_msg(p_pose.pose.orientation) + angle);
-        w += mcl->gaussian(mcl->laser.ranges[i], mcl->laser_noise, dist_to_wall);
+    double weight = 0;
+    for(int i=0; i<laser.ranges.size(); i+=step_count){
+        double angle = i * laser.angle_increment + laser.angle_min;
+        double dist_to_wall = dist_from_p_to_wall(pose.pose.position.x, pose.pose.position.y, create_yaw_from_msg(pose.pose.orientation) + angle);
+        weight += gaussian(laser.ranges[i], laser.ranges[i] * laser_noise, dist_to_wall);
     }
-    return w;
+    return weight;
 }
 
 double  Localizer::adjust_yaw(double yaw)

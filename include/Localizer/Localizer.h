@@ -26,8 +26,6 @@ class Localizer
                 double w;
                 void set_p(double x, double y, double yaw, double x_sigma, double y_sigma, double yaw_sigma);
                 void p_move(double dtrans, double drot1, double drot2);
-                double  calc_w();
-
             private:
                 double create_yaw_from_msg(geometry_msgs::Quaternion q);
                 double substract_yawA_from_yawB(double yawA, double yawB);
@@ -52,10 +50,14 @@ class Localizer
         int xy_to_map_index(double x, double y);
         bool map_range_check(double x, double y);
         double dist_from_p_to_wall(double x, double y, double yaw);
+        double calc_w(geometry_msgs::PoseStamped pose);
         void normalize_w();
-        void resampling_particle();
+        void normal_resampling();
+        void adaptive_resampling();
         void observation_update();
         void estimate_pose();
+        void expansion_reset();
+        void simple_reset();
 
         int hz;
         int particle_number;
@@ -74,12 +76,21 @@ class Localizer
         double reset_x_sigma;
         double reset_y_sigma;
         double reset_yaw_sigma;
+        double expansion_x_speed;
+        double expansion_y_speed;
+        double expansion_yaw_speed;
+        double alpha_th;
+        double reset_limit;
+        double simple_reset_x_sigma;
+        double simple_reset_y_sigma;
+        double simple_reset_yaw_sigma;
 
         double alpha = 0;
         double alpha_slow = alpha;
         double alpha_fast = alpha;
         bool map_get_ok = false;
         bool odometry_get_ok = false;
+        int reset_count = 0;
 
 
         ros::NodeHandle private_nh;
