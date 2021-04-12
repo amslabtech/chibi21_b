@@ -1,31 +1,58 @@
-#include "local_path_planner.h"
+#include "local_path_planner/local_path_planner.h"
 
 DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
 {
-    //private_nh.param("",,{});
+    private_nh.param("RESOLUTION_VELOCITY_NUM",RESOLUTION_VELOCITY_NUM,{10});
+    private_nh.param("RESOLUTION_OMEGA_NUM",RESOLUTION_OMEGA_NUM,{10});
+    private_nh.param("DT",DT,{0.05});
+    private_nh.param("LINEAR_SPEED_MAX",LINEAR_SPEED_MAX,{1.0});
+    private_nh.param("LINEAR_SPEED_MIN",LINEAR_SPEED_MIN,{0.0});
+    private_nh.param("ANGULAR_SPEED_MAX",ANGULAR_SPEED_MAX,{0.8});
+    private_nh.param("LINEAR_ACCL",LINEAR_ACCL,{1.0});
+    private_nh.param("ANGULAR_ACCL",ANGULAR_ACCL,{2.0});
+    private_nh.param("COST_HEADING_GAIN",COST_HEADING_GAIN,{1.0});
+    private_nh.param("COST_VELOCITY_GAIN",COST_VELOCITY_GAIN,{1.0});
+    private_nh.param("COST_OBSTACLE_GAIN",COST_OBSTACLE_GAIN,{1.0});
+    private_nh.param("PREDICT_TIME",PREDICT_TIME,{3.0});
+    // private_nh.param("",,{});
 
-    //sub_;
+    sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
+    sub_estimated_pose=nh.subscribe("/mcl_pose",100,&DynamicWindowApproach::estimated_pose_callback,this);
+    // sub_local_map=nh.subscribe("/path",100,&DynamicWindowApproach::local_goal_callback,this);
+    sub_odometry=nh.subscribe("/roomba/odometry",100,&DynamicWindowApproach::odometry_callback,this);
+
+    pub_roomba_ctrl=nh.advertise<roomba_500driver_meiji::RoombaCtrl>("/roomba/control",1);
+    pub_best_traj=nh.advertise<nav_msgs::Path>("best_traj",1);
+    // pub_trajectries=nh.advertise<vector<nav_msgs::Path>>("trajectories",1);
 }
 
-void DynamicWindowApproach::scan_callback(const sensor_msgs::LaserScanConstPtr& msg)
+void DynamicWindowApproach::scan_callback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
+    scan=*msg;
 }
 
-void DynamicWindowApproach::estimated_pose_callback(const geometry_msgs::PoseStampedConstPtr& msg)
+void DynamicWindowApproach::estimated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
+    estimated_pose=*msg;
+
+    current_state.x=estimated_pose.pose.position.x;
+    current_state.y=estimated_pose.pose.position.y;
+    current_state.yaw=tf::getYaw(estimated_pose.pose.orientation);
 }
 
-void DynamicWindowApproach::local_goal_callback(const geometry_msgs::PoseStampedConstPtr& msg)
-{
-}
-
-// void DynamicWindowApproach::get_current_state()
+// void DynamicWindowApproach::local_goal_callback(const nav_msgs::Path::ConstPtr& msg)
 // {
+//
 // }
 
-// void DynamicWindowApproach::get_local_goal()
-// {
-// }
+void DynamicWindowApproach::odometry_callback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+    odometry=*msg;
+
+    current_state.velocity=odometry.twist.twist.linear.x;
+    current_state.omega=odometry.twist.twist.angular.z;
+}
+
 void DynamicWindowApproach::calc_dynamic_window()
 {
     Vs.vel_max=LINEAR_SPEED_MAX;
@@ -43,18 +70,29 @@ void DynamicWindowApproach::calc_dynamic_window()
     dw.omega_max=std::min(Vs.omega_max,Vd.omega_max);
     dw.omega_min=std::max(Vs.omega_min,Vd.omega_min);
 
-    return 0;
 }
 
 void DynamicWindowApproach::calc_trajectory()
 {
+    best_traj.clear();
+    trajectories.clear();
+
     double resolution_velocity=(dw.vel_max-dw.vel_min)/RESOLUTION_VELOCITY_NUM;
     double resolution_omega=(dw.omega_max-dw.omega_min)/RESOLUTION_OMEGA_NUM;
 
     double cost_max=0;
+    double best_velocity=LINEAR_SPEED_MAX;
+    double best_omega=0.0;
+
     for(double v=dw.vel_min;v<=dw.vel_max;v+=resolution_velocity){
         for(double w=dw.omega_min;w<=dw.omega_max;w+=resolution_omega){
-            State state=[0.0,0.0,0.0,current_state.velocity,current_state.omega];
+            State state;
+            state.x=0.0;
+            state.y=0.0;
+            state.yaw=0.0;
+            state.velocity=current_state.velocity;
+            state.omega=current_state.omega;
+
             std::vector<State> traj;
             for(double t=0;t<=PREDICT_TIME;t+=DT){
                 roomba_motion(state,v,w);
@@ -67,13 +105,22 @@ void DynamicWindowApproach::calc_trajectory()
             double cost_obstacle=calc_cost_obstacle(traj);
             double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle;
 
-            if(cost_sum>cost_min){
+            if(cost_sum>cost_max){
                 cost_max=cost_sum;
                 best_traj=traj;
+                best_velocity=v;
+                best_omega=w;
             }
         }
     }
-    return 0;
+
+    roomba_500driver_meiji::RoombaCtrl cmd_vel;
+    cmd_vel.cntl.linear.x=best_velocity;
+    cmd_vel.cntl.angular.z=best_omega;
+    pub_roomba_ctrl.publish(cmd_vel);
+
+    visualize_best_traj(best_traj);
+    // visualize_trajectries(trajectories);
 }
 
 void DynamicWindowApproach::roomba_motion(State& state, double velocity, double omega)
@@ -85,18 +132,17 @@ void DynamicWindowApproach::roomba_motion(State& state, double velocity, double 
     state.y+=velocity*std::sin(state.yaw)*DT;
     state.velocity=velocity;
     state.omega=omega;
-    return 0;
 }
 
-double DynamicWindowApproach::calc_cost_heading(State traj_last_state)
+double DynamicWindowApproach::calc_cost_heading(State& traj_last_state)
 {
-    double angle_to_goal=atan2(local_goal.y-traj_last_state.y,local_goal.x-traj_last_state.x);
+    double angle_to_goal=std::atan2(local_goal.y-traj_last_state.y,local_goal.x-traj_last_state.x);
     double angle_diff=angle_to_goal-traj_last_state.yaw;
     if(angle_diff>M_PI) angle_diff-=2*M_PI;
     else if(angle_diff<-M_PI) angle_diff+=2*M_PI;
     angle_diff=std::abs(angle_diff);
 
-    return std::max(angle_diff,0,0);
+    return std::max(angle_diff,0.0);
 }
 
 double DynamicWindowApproach::calc_cost_velocity(double velocity)
@@ -104,7 +150,7 @@ double DynamicWindowApproach::calc_cost_velocity(double velocity)
     return std::max(local_goal.velocity-velocity,0.0);
 }
 
-double DynamicWindowApproach::calc_cost_obstacle(std::vector<State> traj)
+double DynamicWindowApproach::calc_cost_obstacle(std::vector<State>& traj)
 {
     double dist_min=1e3; //最も近くなる時の距離
     for(auto& state : traj){
@@ -118,6 +164,7 @@ double DynamicWindowApproach::calc_cost_obstacle(std::vector<State> traj)
 
 void DynamicWindowApproach::scan_to_obs()
 {
+    obs_list.clear();
     double angle=scan.angle_min;
     for(auto r : scan.ranges){
         double x=r*cos(angle);
@@ -125,12 +172,56 @@ void DynamicWindowApproach::scan_to_obs()
         std::vector<double> obs_state={x,y};
         obs_list.push_back(obs_state);
         angle+=scan.angle_increment;
+    }
 }
 
 void DynamicWindowApproach::process()
 {
-    calc_dynamic_window();
-    calc_trajectory();
+    ros::Rate loop_rate(1/DT);
+    init();
+    while(ros::ok()){
+        calc_dynamic_window();
+        calc_trajectory();
+
+        ros::spinOnce();
+        loop_rate.sleep();
+        ROS_INFO_STREAM("loop time:"<<ros::Time::now().toSec()<<"[s]");
+    }
+}
+
+void DynamicWindowApproach::visualize_best_traj(std::vector<State>& traj)
+{
+    nav_msgs::Path v_traj;
+    v_traj.header.frame_id="base_link";
+
+    for(auto traj_state :traj){
+        geometry_msgs::PoseStamped state;
+        state.pose.position.x=traj_state.x;
+        state.pose.position.y=traj_state.y;
+        v_traj.poses.push_back(state);
+    }
+    pub_best_traj.publish(v_traj);
+}
+
+// void DynamicWindowApproach::visualize_trajectries()
+// {
+// }
+
+void DynamicWindowApproach::init()
+{
+    current_state.x=0.0;
+    current_state.y=0.0;
+    current_state.yaw=0.0;
+    current_state.velocity=0.0;
+    current_state.omega=0.0;
+
+    local_goal.x=LINEAR_SPEED_MAX*PREDICT_TIME;
+    local_goal.y=0.0;
+    local_goal.yaw=0.0;
+    local_goal.velocity=LINEAR_SPEED_MAX;
+    local_goal.yaw=0.0;
+
+    obs_list.clear();
 }
 
 int main(int argc, char **argv)

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(chibi21_b)
-
+SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
   nav_msgs
   roomba_500driver_meiji
 )
@@ -105,8 +106,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES chibi21_b
+ INCLUDE_DIRS include
+#  LIBRARIES local_path_planner
 #  CATKIN_DEPENDS roscpp rospy
 #  DEPENDS system_lib
 )
@@ -138,6 +139,7 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/chibi21_b_node.cpp)
 add_executable(Localizer src/Localizer.cpp)
 add_executable(Global_path_planner src/Global_path_planner.cpp)
+add_executable(local_path_planner src/local_path_planner.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -149,12 +151,14 @@ add_executable(Global_path_planner src/Global_path_planner.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(Localizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(Global_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(local_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(Localizer ${catkin_LIBRARIES})
 target_link_libraries(Global_path_planner ${catkin_LIBRARIES})
+target_link_libraries(local_path_planner ${catkin_LIBRARIES})
 
 #############
 ## Install ##
