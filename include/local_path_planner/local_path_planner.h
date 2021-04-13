@@ -40,6 +40,7 @@ class DynamicWindowApproach
         int RESOLUTION_VELOCITY_NUM;
         int RESOLUTION_OMEGA_NUM;
         double DT;
+        std::string ROBOT_FRAME;
 
         //roomba's spec
         double LINEAR_SPEED_MAX;

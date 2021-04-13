@@ -140,6 +140,7 @@ include_directories(
 add_executable(Localizer src/Localizer.cpp)
 add_executable(Global_path_planner src/Global_path_planner.cpp)
 add_executable(local_path_planner src/local_path_planner.cpp)
+add_executable(dummy_topic src/dummy_topic.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -152,6 +153,7 @@ add_executable(local_path_planner src/local_path_planner.cpp)
 add_dependencies(Localizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(Global_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(local_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(dummy_topic ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
@@ -159,6 +161,7 @@ add_dependencies(local_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin
 target_link_libraries(Localizer ${catkin_LIBRARIES})
 target_link_libraries(Global_path_planner ${catkin_LIBRARIES})
 target_link_libraries(local_path_planner ${catkin_LIBRARIES})
+target_link_libraries(dummy_topic ${catkin_LIBRARIES})
 
 #############
 ## Install ##

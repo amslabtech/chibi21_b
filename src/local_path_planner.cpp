@@ -5,6 +5,7 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
     private_nh.param("RESOLUTION_VELOCITY_NUM",RESOLUTION_VELOCITY_NUM,{10});
     private_nh.param("RESOLUTION_OMEGA_NUM",RESOLUTION_OMEGA_NUM,{10});
     private_nh.param("DT",DT,{0.05});
+    private_nh.param("ROBOT_FRAME",ROBOT_FRAME,{"base_link"});
     private_nh.param("LINEAR_SPEED_MAX",LINEAR_SPEED_MAX,{1.0});
     private_nh.param("LINEAR_SPEED_MIN",LINEAR_SPEED_MIN,{0.0});
     private_nh.param("ANGULAR_SPEED_MAX",ANGULAR_SPEED_MAX,{0.8});
@@ -70,6 +71,9 @@ void DynamicWindowApproach::calc_dynamic_window()
     dw.omega_max=std::min(Vs.omega_max,Vd.omega_max);
     dw.omega_min=std::max(Vs.omega_min,Vd.omega_min);
 
+    // ROS_INFO_STREAM("dw.vel_max = "<<dw.vel_max<<" || dw.vel_min = "<<dw.vel_min);
+    // ROS_INFO_STREAM("dw.omega_max = "<<dw.omega_max<<" || dw.omega_min = "<<dw.omega_min);
+
 }
 
 void DynamicWindowApproach::calc_trajectory()
@@ -80,7 +84,7 @@ void DynamicWindowApproach::calc_trajectory()
     double resolution_velocity=(dw.vel_max-dw.vel_min)/RESOLUTION_VELOCITY_NUM;
     double resolution_omega=(dw.omega_max-dw.omega_min)/RESOLUTION_OMEGA_NUM;
 
-    double cost_max=0;
+    double cost_min=1e3;
     double best_velocity=LINEAR_SPEED_MAX;
     double best_omega=0.0;
 
@@ -105,14 +109,15 @@ void DynamicWindowApproach::calc_trajectory()
             double cost_obstacle=calc_cost_obstacle(traj);
             double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle;
 
-            if(cost_sum>cost_max){
-                cost_max=cost_sum;
+            if(cost_sum<cost_min){
+                cost_min=cost_sum;
                 best_traj=traj;
                 best_velocity=v;
                 best_omega=w;
             }
         }
     }
+    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega);
 
     roomba_500driver_meiji::RoombaCtrl cmd_vel;
     cmd_vel.cntl.linear.x=best_velocity;
@@ -120,6 +125,7 @@ void DynamicWindowApproach::calc_trajectory()
     pub_roomba_ctrl.publish(cmd_vel);
 
     visualize_best_traj(best_traj);
+    // ROS_INFO_STREAM(best_traj);
     // visualize_trajectries(trajectories);
 }
 
@@ -142,6 +148,10 @@ double DynamicWindowApproach::calc_cost_heading(State& traj_last_state)
     else if(angle_diff<-M_PI) angle_diff+=2*M_PI;
     angle_diff=std::abs(angle_diff);
 
+    // ROS_INFO_STREAM("local_goal.x = "<<local_goal.x<<" || local_goal.y = "<<local_goal.y);
+    // ROS_INFO_STREAM("traj_last_state.x = "<<traj_last_state.x<<" || traj_last_state.y = "<<traj_last_state.y);
+    // ROS_INFO_STREAM("angle_diff = "<<angle_diff);
+
     return std::max(angle_diff,0.0);
 }
 
@@ -159,7 +169,7 @@ double DynamicWindowApproach::calc_cost_obstacle(std::vector<State>& traj)
             if(dist<dist_min) dist_min=dist;
         }
     }
-    return 1/dist_min; //距離が小さくなるほどコストが大きくなる
+    return std::max(1/dist_min,0.0); //距離が小さくなるほどコストが大きくなる
 }
 
 void DynamicWindowApproach::scan_to_obs()
@@ -167,8 +177,8 @@ void DynamicWindowApproach::scan_to_obs()
     obs_list.clear();
     double angle=scan.angle_min;
     for(auto r : scan.ranges){
-        double x=r*cos(angle);
-        double y=r*sin(angle);
+        double x=r*std::cos(angle);
+        double y=r*std::sin(angle);
         std::vector<double> obs_state={x,y};
         obs_list.push_back(obs_state);
         angle+=scan.angle_increment;
@@ -185,16 +195,17 @@ void DynamicWindowApproach::process()
 
         ros::spinOnce();
         loop_rate.sleep();
-        ROS_INFO_STREAM("loop time:"<<ros::Time::now().toSec()<<"[s]");
+        // ROS_INFO_STREAM("loop time:"<<ros::Time::now().toSec()<<"[s]");
     }
 }
 
 void DynamicWindowApproach::visualize_best_traj(std::vector<State>& traj)
 {
     nav_msgs::Path v_traj;
-    v_traj.header.frame_id="base_link";
+    v_traj.header.frame_id=ROBOT_FRAME;
+    v_traj.header.stamp=ros::Time::now();
 
-    for(auto traj_state :traj){
+    for(auto& traj_state :traj){
         geometry_msgs::PoseStamped state;
         state.pose.position.x=traj_state.x;
         state.pose.position.y=traj_state.y;
@@ -212,11 +223,11 @@ void DynamicWindowApproach::init()
     current_state.x=0.0;
     current_state.y=0.0;
     current_state.yaw=0.0;
-    current_state.velocity=0.0;
+    current_state.velocity=0.5;
     current_state.omega=0.0;
 
     local_goal.x=LINEAR_SPEED_MAX*PREDICT_TIME;
-    local_goal.y=0.0;
+    local_goal.y=+5.0;
     local_goal.yaw=0.0;
     local_goal.velocity=LINEAR_SPEED_MAX;
     local_goal.yaw=0.0;

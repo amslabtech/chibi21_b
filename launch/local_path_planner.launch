@@ -4,6 +4,7 @@
     <param name="RESOLUTION_VELOCITY_NUM" value="10"/>
     <param name="RESOLUTION_OMEGA_NUM" value="10"/>
     <param name="DT" value="0.1"/>
+    <param name="ROBOT_FRAME" value="map"/>
     <param name="LINEAR_SPEED_MAX" value="1.0"/>
     <param name="LINEAR_SPEED_MIN" value="0.0"/>
     <param name="ANGULAR_SPEED_MAX" value="0.8"/>
