@@ -97,9 +97,11 @@ class AStarPath
         ros::Subscriber sub_map;
         ros::Publisher pub_map;
         ros::Publisher pub_path;
+        ros::Publisher pub_goal;
         nav_msgs::OccupancyGrid the_map;//map格納
         nav_msgs::Path global_path;//Local_path_plannerにおくる
         nav_msgs::Path mini_path;//仮のゴール間のpath
+        geometry_msgs::PoseStamped goal_point;//今目指してるゴール
         geometry_msgs::PoseStamped mcl_pose;//Localizerからもらう
 
 

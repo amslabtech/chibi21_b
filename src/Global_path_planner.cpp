@@ -11,6 +11,7 @@ AStarPath::AStarPath():private_nh("")
     sub_map = nh.subscribe("/map",10,&AStarPath::map_callback,this);
     pub_map = nh.advertise<nav_msgs::OccupancyGrid>("/map",1);
     pub_path = nh.advertise<nav_msgs::Path>("/path",1);
+    pub_goal = nh.advertise<geometry_msgs::PoseStamped>("/mini_goal",1);
 
 }
 
@@ -234,8 +235,14 @@ void AStarPath::A_star()
 
     for(int i=0;i<5;i++)
     {
+        mini_path.poses.clear();
+        //goal_point.pose.clear();
         make_heuristic(i+1);
         reached = false;
+        goal_point.header.frame_id = "map";
+        goal_point.pose.position.x = goal[i+1].x;
+        goal_point.pose.position.y = goal[i+1].y;
+        pub_goal.publish(goal_point);
 
         close_list = std::vector<std::vector<open>>(row,std::vector<open>(col));
         for(int r=0;r<row;r++)
@@ -260,6 +267,8 @@ void AStarPath::A_star()
         int x = goal[i].x;
         int y = goal[i].y;
         int g = 0;
+
+        //std::cout<<goal[i].x<<","<<goal[i].y<<","<<goal[i+1].x<<","<<goal[i+1].y<<std::endl;
 
 
         std::cout<<"start_searching"<<std::endl;
@@ -337,15 +346,15 @@ void AStarPath::A_star()
             std::cout<<close_list[x][y].pre_y<<std::endl;*/
                     x = x + delta[kmin].x;
                     y = y + delta[kmin].y;
-                    std::cout<<close_list[x][y].pre_x;
-                    std::cout<<",";
-                    std::cout<<close_list[x][y].pre_y;
-                    std::cout<<",";
-                    std::cout<<x;
-                    std::cout<<",";
-                    std::cout<<y;
-                    std::cout<<",";
-                    std::cout<<open_list[x][y].f<<std::endl;
+                    // std::cout<<close_list[x][y].pre_x;
+                    // std::cout<<",";
+                    // std::cout<<close_list[x][y].pre_y;
+                    // std::cout<<",";
+                    // std::cout<<x;
+                    // std::cout<<",";
+                    // std::cout<<y;
+                    // std::cout<<",";
+                    // std::cout<<open_list[x][y].f<<std::endl;
                 }
             }
 
@@ -362,8 +371,7 @@ void AStarPath::A_star()
         mom.x = close_list[x][y].pre_x;
         mom.y = close_list[x][y].pre_y;
         std::cout<<"momdad"<<std::endl;
-        std::cout<<mom.x<<std::endl;
-        std::cout<<mom.y<<std::endl;
+        std::cout<<mom.x<<","<<mom.y<<std::endl;
 
         while(!startpoint)
         {
@@ -385,6 +393,8 @@ void AStarPath::A_star()
                     dad.y = mom.y;
                     mom.x = close_list[dad.x][dad.y].pre_x;
                     mom.y = close_list[dad.x][dad.y].pre_y;
+
+                    std::cout<<mom.x<<","<<mom.y<<std::endl;
 
                     //if(mom.y != 0) std::cout<<mom.y<<std::endl;
             }
