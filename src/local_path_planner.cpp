@@ -15,16 +15,19 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
     private_nh.param("COST_VELOCITY_GAIN",COST_VELOCITY_GAIN,{1.0});
     private_nh.param("COST_OBSTACLE_GAIN",COST_OBSTACLE_GAIN,{1.0});
     private_nh.param("PREDICT_TIME",PREDICT_TIME,{3.0});
+    private_nh.param("USE_DUMMY_TOPIC",USE_DUMMY_TOPIC,{false});
     // private_nh.param("",,{});
 
-    sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
+    // sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
     sub_estimated_pose=nh.subscribe("/mcl_pose",100,&DynamicWindowApproach::estimated_pose_callback,this);
-    // sub_local_map=nh.subscribe("/path",100,&DynamicWindowApproach::local_goal_callback,this);
-    sub_odometry=nh.subscribe("/roomba/odometry",100,&DynamicWindowApproach::odometry_callback,this);
-
+    sub_local_map=nh.subscribe("/local_goal",100,&DynamicWindowApproach::local_goal_callback,this);
+    if(USE_DUMMY_TOPIC){sub_twist=nh.subscribe("/dummy_twist",100,&DynamicWindowApproach::twist_to_odometry_callback,this);
+    }else{
+        sub_odometry=nh.subscribe("/roomba/odometry",100,&DynamicWindowApproach::odometry_callback,this);
+    }
     pub_roomba_ctrl=nh.advertise<roomba_500driver_meiji::RoombaCtrl>("/roomba/control",1);
     pub_best_traj=nh.advertise<nav_msgs::Path>("best_traj",1);
-    // pub_trajectries=nh.advertise<vector<nav_msgs::Path>>("trajectories",1);
+    pub_trajectries=nh.advertise<nav_msgs::Path>("trajectories",1);
 }
 
 void DynamicWindowApproach::scan_callback(const sensor_msgs::LaserScan::ConstPtr& msg)
@@ -41,10 +44,16 @@ void DynamicWindowApproach::estimated_pose_callback(const geometry_msgs::PoseSta
     current_state.yaw=tf::getYaw(estimated_pose.pose.orientation);
 }
 
-// void DynamicWindowApproach::local_goal_callback(const nav_msgs::Path::ConstPtr& msg)
-// {
-//
-// }
+void DynamicWindowApproach::local_goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+    geometry_msgs::PoseStamped _local_goal=*msg;
+
+    local_goal.x=_local_goal.pose.position.x;
+    local_goal.y=_local_goal.pose.position.y;
+    local_goal.yaw=tf::getYaw(_local_goal.pose.orientation);
+    local_goal.velocity=LINEAR_SPEED_MAX;
+    local_goal.omega=0.0;
+}
 
 void DynamicWindowApproach::odometry_callback(const nav_msgs::Odometry::ConstPtr& msg)
 {
@@ -52,6 +61,16 @@ void DynamicWindowApproach::odometry_callback(const nav_msgs::Odometry::ConstPtr
 
     current_state.velocity=odometry.twist.twist.linear.x;
     current_state.omega=odometry.twist.twist.angular.z;
+}
+
+void DynamicWindowApproach::twist_to_odometry_callback(const geometry_msgs::Twist::ConstPtr& msg)
+{
+    geometry_msgs::Twist twist=*msg;
+
+    current_state.velocity=sqrt(std::pow(twist.linear.x,2)+std::pow(twist.linear.y,2));
+    current_state.omega=twist.angular.z;
+
+    // ROS_INFO_STREAM("current_state.velocity = "<<current_state.velocity<<" || current_state.omega ="<<current_state.omega);
 }
 
 void DynamicWindowApproach::calc_dynamic_window()
@@ -88,8 +107,9 @@ void DynamicWindowApproach::calc_trajectory()
     double best_velocity=LINEAR_SPEED_MAX;
     double best_omega=0.0;
 
-    for(double v=dw.vel_min;v<=dw.vel_max;v+=resolution_velocity){
-        for(double w=dw.omega_min;w<=dw.omega_max;w+=resolution_omega){
+    int count=0;
+    for(double v=dw.vel_min;v<dw.vel_max;v+=resolution_velocity){
+        for(double w=dw.omega_min;w<dw.omega_max;w+=resolution_omega){
             State state;
             state.x=0.0;
             state.y=0.0;
@@ -103,6 +123,7 @@ void DynamicWindowApproach::calc_trajectory()
                 traj.push_back(state);
             }
             trajectories.push_back(traj);
+            visualize_traj(trajectories[0],pub_trajectries);
 
             double cost_heading=calc_cost_heading(traj.back());
             double cost_velocity=calc_cost_velocity(v);
@@ -115,16 +136,17 @@ void DynamicWindowApproach::calc_trajectory()
                 best_velocity=v;
                 best_omega=w;
             }
+            count++;
         }
     }
-    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega);
+    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega<<" || count = "<<count);
 
     roomba_500driver_meiji::RoombaCtrl cmd_vel;
     cmd_vel.cntl.linear.x=best_velocity;
     cmd_vel.cntl.angular.z=best_omega;
     pub_roomba_ctrl.publish(cmd_vel);
 
-    visualize_best_traj(best_traj);
+    visualize_traj(best_traj,pub_best_traj);
     // ROS_INFO_STREAM(best_traj);
     // visualize_trajectries(trajectories);
 }
@@ -142,8 +164,9 @@ void DynamicWindowApproach::roomba_motion(State& state, double velocity, double 
 
 double DynamicWindowApproach::calc_cost_heading(State& traj_last_state)
 {
-    double angle_to_goal=std::atan2(local_goal.y-traj_last_state.y,local_goal.x-traj_last_state.x);
-    double angle_diff=angle_to_goal-traj_last_state.yaw;
+    double angle_to_goal=std::atan2((local_goal.y-current_state.y)-traj_last_state.y,(local_goal.x-current_state.x)-traj_last_state.x);
+
+    double angle_diff=angle_to_goal-(current_state.yaw+traj_last_state.yaw);
     if(angle_diff>M_PI) angle_diff-=2*M_PI;
     else if(angle_diff<-M_PI) angle_diff+=2*M_PI;
     angle_diff=std::abs(angle_diff);
@@ -199,7 +222,7 @@ void DynamicWindowApproach::process()
     }
 }
 
-void DynamicWindowApproach::visualize_best_traj(std::vector<State>& traj)
+void DynamicWindowApproach::visualize_traj(std::vector<State>& traj,const ros::Publisher& pub)
 {
     nav_msgs::Path v_traj;
     v_traj.header.frame_id=ROBOT_FRAME;
@@ -211,7 +234,7 @@ void DynamicWindowApproach::visualize_best_traj(std::vector<State>& traj)
         state.pose.position.y=traj_state.y;
         v_traj.poses.push_back(state);
     }
-    pub_best_traj.publish(v_traj);
+    pub.publish(v_traj);
 }
 
 // void DynamicWindowApproach::visualize_trajectries()
@@ -223,14 +246,14 @@ void DynamicWindowApproach::init()
     current_state.x=0.0;
     current_state.y=0.0;
     current_state.yaw=0.0;
-    current_state.velocity=0.5;
+    current_state.velocity=0.0;
     current_state.omega=0.0;
 
     local_goal.x=LINEAR_SPEED_MAX*PREDICT_TIME;
     local_goal.y=+5.0;
     local_goal.yaw=0.0;
-    local_goal.velocity=LINEAR_SPEED_MAX;
-    local_goal.yaw=0.0;
+    local_goal.velocity=0.0;
+    local_goal.omega=0.0;
 
     obs_list.clear();
 }

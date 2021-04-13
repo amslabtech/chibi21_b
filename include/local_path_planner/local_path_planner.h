@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
 #include <nav_msgs/Path.h>
@@ -41,6 +42,7 @@ class DynamicWindowApproach
         int RESOLUTION_OMEGA_NUM;
         double DT;
         std::string ROBOT_FRAME;
+        bool USE_DUMMY_TOPIC;
 
         //roomba's spec
         double LINEAR_SPEED_MAX;
@@ -62,16 +64,16 @@ class DynamicWindowApproach
         std::vector<std::vector<double>> obs_list;
         sensor_msgs::LaserScan scan;
         geometry_msgs::PoseStamped estimated_pose;
-        geometry_msgs::PoseStamped local_goal_sim;
+        // geometry_msgs::PoseStamped local_goal_sim;
         nav_msgs::Odometry odometry;
         double PREDICT_TIME;
 
         //method
         void scan_callback(const sensor_msgs::LaserScan::ConstPtr &);
         void estimated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr &);
-        // void local_goal_path_callback(const nav_msgs::Path::ConstPtr &);
-        // void local_goal_posestamped_callback(const geometry_msgs::PoseStamped::ConstPtr &);
+        void local_goal_callback(const geometry_msgs::PoseStamped::ConstPtr &);
         void odometry_callback(const nav_msgs::Odometry::ConstPtr &);
+        void twist_to_odometry_callback(const geometry_msgs::Twist::ConstPtr &);
         void calc_dynamic_window();
         void calc_trajectory();
         void roomba_motion(State&, double, double);
@@ -89,13 +91,14 @@ class DynamicWindowApproach
         ros::Subscriber sub_estimated_pose;
         ros::Subscriber sub_local_map;
         ros::Subscriber sub_odometry;
+        ros::Subscriber sub_twist;
         ros::Publisher pub_roomba_ctrl;
 
         //rviz
         ros::Publisher pub_best_traj;
-        // ros::Publisher pub_trajectries;
+        ros::Publisher pub_trajectries;
         // ros::Publisher pub_local_goal;
-        void visualize_best_traj(std::vector<State>&);
+        void visualize_traj(std::vector<State>&,const ros::Publisher&);
         // void visualize_trajectories();
 };
 #endif

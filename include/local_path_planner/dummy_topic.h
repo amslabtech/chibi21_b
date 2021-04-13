@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <tf/tf.h>
@@ -17,9 +18,13 @@ class Dummy
         void cmd_vel_callback(const roomba_500driver_meiji::RoombaCtrl::ConstPtr &);
         void dummy_estimated_pose();
         void dummy_local_goal();
-        void dummy_odometry();
+        void dummy_twist();
 
         double DT;
+        double pre_x;
+        double pre_y;
+        double pre_yaw;
+        roomba_500driver_meiji::RoombaCtrl cmd_vel;
         std::string ROBOT_FRAME;
         std::string MAP_FRAME;
 
@@ -28,7 +33,7 @@ class Dummy
 
         ros::Publisher pub_estimated_pose;
         ros::Publisher pub_local_goal;
-        ros::Publisher pub_odometry;
+        ros::Publisher pub_twist;
         ros::Subscriber sub_cmd_vel;
 
 };
