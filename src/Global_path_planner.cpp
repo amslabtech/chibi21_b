@@ -2,7 +2,7 @@
 
 AStarPath::AStarPath():private_nh("")
 {
-    //paramきめたらそれ書く
+    //param
     private_nh.param("hz",hz,{10});
     private_nh.param("map_checker",map_checker,{false});
     private_nh.param("wall_checker",wall_checker,{false});
@@ -56,11 +56,15 @@ void AStarPath::thick_wall()
         {
             for(int j=0;j<col;j++)
             {
-                if((i>2282 && i<2287 && j>1547 && j<1893) || (i>1997 && i<2282 && j<1547 && j>1553) || (i>1997 && i<2003 && j>1547 && j<2213) || (i>2003 && i<2287 && j>2207 && j<2213))
+                //map_cleaner
+                if((i>2282 && i<2295 && j>1547 && j<2213) || (i>1997 && i<2282 && j>1540 && j<1555) || (i>1995 && i<2007 && j>1547 && j<2213) || (i>2003 && i<2290 && j>2205 && j<2220))
+                {
                     if(map_grid[i][j]==100)
                     {
                         map_grid[i][j] = 0;
                     }
+                }
+                //map_copy
                 map_grid_copy[i][j] = map_grid[i][j];
             }
            // std::cout<<std::endl;
@@ -155,10 +159,10 @@ void AStarPath::thick_wall()
         res = the_map.info.resolution;
         std::cout<<res<<std::endl;
 
-        std::cout<<map_grid[2000][1550]<<std::endl;
-        std::cout<<map_grid[1999][1666]<<std::endl;
-        std::cout<<map_grid[2285][1642]<<std::endl;
-        std::cout<<map_grid[2285][1641]<<std::endl;
+        // std::cout<<map_grid[2000][1550]<<std::endl;
+        // std::cout<<map_grid[1999][1666]<<std::endl;
+        // std::cout<<map_grid[2285][1642]<<std::endl;
+        // std::cout<<map_grid[2285][1641]<<std::endl;
 
 
         for(int i=0;i<row;i++)
@@ -180,7 +184,8 @@ void AStarPath::thick_wall()
 
 void AStarPath::set_goal()
 {
-    goal = {{2285,1890},{2285,1550},{2000,1550},{2000,2210},{2285,2210},{2285,1890}};
+    //goal = {{2285,1890},{2285,1550},{2000,1550},{2000,2210},{2285,2210},{2285,1890}}; スタート位置間違えてた。↓が正しい方です。
+    goal = {{2000,1890},{2000,2210},{2285,2210},{2285,1550},{2000,1550},{2000,1890}};
     //goal[0]:startpoint
     //goal[5]:goalpoint
     std::cout<<"set_goal"<<std::endl;
@@ -394,7 +399,7 @@ void AStarPath::A_star()
                     mom.x = close_list[dad.x][dad.y].pre_x;
                     mom.y = close_list[dad.x][dad.y].pre_y;
 
-                    std::cout<<mom.x<<","<<mom.y<<std::endl;
+                    //std::cout<<mom.x<<","<<mom.y<<std::endl;
 
                     //if(mom.y != 0) std::cout<<mom.y<<std::endl;
             }
