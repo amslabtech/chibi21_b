@@ -39,5 +39,5 @@
     </node>
     <node pkg="rviz" name="rviz" type="rviz" args="-d $(find chibi21_b)/config/Localizer.rviz" output="screen"/>
     <node pkg="joy" name="joy_node" type="joy_node"/>
-    <node pkg="roomba_teleop_meiji" type="electric_joystick_driver" name="electric_joystick_driver"/>
+    <node pkg="roomba_teleop_meiji" type="electric_joystick_driver" name="electric_joystick_drive"/>
 </launch>
