@@ -290,7 +290,7 @@ void Localizer::observation_update()
     }
     estimate_pose();
     double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / step_count);
-    std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
+    //std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
     //resampling_particle();
     if(alpha_slow == 0){
         alpha_slow = alpha;
@@ -344,12 +344,54 @@ void Localizer::estimate_pose()
 }
 void Localizer::process()
 {
+    //TF Broadcasterの実体化
+    tf::TransformBroadcaster odom_state_broadcaster;
+
     ros::Rate rate(hz);
     while(ros::ok()){
-        create_p_pose_array_from_p_array(p_array);
-        p_pose_array_pub.publish(p_pose_array);
-        mcl_pose_pub.publish(mcl_pose);
-        //ROS_INFO("publish p_pose_array");
+        if(map_get_ok && odometry_get_ok){
+            try{
+
+            //map座標で見たbase_linkの位置の取得
+            double map_to_base_x = mcl_pose.pose.position.x;
+            double map_to_base_y = mcl_pose.pose.position.y;
+            double map_to_base_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
+            //odom座標で見たbase_linkの位置の取得
+            double odom_to_base_x = current_odometry.pose.pose.position.x;
+            double odom_to_base_y = current_odometry.pose.pose.position.y;
+            double odom_to_base_yaw = create_yaw_from_msg(current_odometry.pose.pose.orientation);
+            //map座標で見たodom座標の位置の取得
+            double map_to_odom_x = odom_to_base_x - map_to_base_x;
+            double map_to_odom_y = odom_to_base_y - map_to_base_y;
+            double map_to_odom_yaw =  substract_yawA_from_yawB(odom_to_base_yaw, map_to_base_yaw);
+            geometry_msgs::Quaternion map_to_odom_quat;
+            quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
+
+            //odom座標系の元となるodomの位置姿勢情報格納用変数の作成
+            geometry_msgs::TransformStamped odom_state;
+            //現在時刻の格納
+            odom_state.header.stamp = ros::Time::now();
+            //座標系mapとodomの指定
+            odom_state.header.frame_id = "map";
+            odom_state.child_frame_id = "odom";
+            //map座標系からみたbase_link座標系の原点位置と方向の格納
+            odom_state.transform.translation.x = map_to_odom_x;
+            odom_state.transform.translation.y = map_to_odom_y;
+            odom_state.transform.translation.z = 0;
+            odom_state.transform.rotation = map_to_odom_quat;
+            //tf情報をbroadcast(座標系の設定)
+            odom_state_broadcaster.sendTransform(odom_state);
+            }
+            catch(tf::TransformException &ex){
+                ROS_ERROR("%s", ex.what());
+                ros::Duration(1.0).sleep();
+            }
+
+            create_p_pose_array_from_p_array(p_array);
+            p_pose_array_pub.publish(p_pose_array);
+            mcl_pose_pub.publish(mcl_pose);
+        }
+
         ros::spinOnce();
         rate.sleep();
     }

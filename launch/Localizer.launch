@@ -3,8 +3,8 @@
 <launch>
     <arg name="map_file" default="$(find chibi21_b)/map/map.yaml"/>
     <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen"/>
-    <node pkg="rosbag" name="play" type="play" args="/home/horiike/map.bag"/>
-
+    <node pkg="rosbag" name="play" type="play" args="--clock $(env HOME)/map.bag"/>
+    <param name="use_sim_time" value="true" type="bool"/>
     <node pkg="chibi21_b" type="Localizer" name="Localizer" output="screen">
         <param name="hz" value="10" type="int"/>
         <param name="particle_number" value="150" type="int"/>
@@ -13,11 +13,11 @@
         <param name="init_yaw" value="0.0" type="double"/>
         <param name="init_x_sigma" value="0.1" type="double"/>
         <param name="init_y_sigma" value="0.1" type="double"/>
-        <param name="init_yaw_sigma" value="0.4" type="double"/>
+        <param name="init_yaw_sigma" value="0.3" type="double"/>
         <param name="move_noise_ratio" value="0.1" type="double"/>
         <param name="laser_noise" value="0.1" type="double"/>
         <param name="search_range" value="30.0" type="double"/>
-        <param name="step_count" value="54" type="int"/>
+        <param name="step_count" value="27" type="int"/>
         <param name="alpha_slow_th" value="0.001" type="double"/>
         <param name="alpha_fast_th" value="0.1" type="double"/>
         <param name="reset_x_sigma" value="0.03" type="double"/>
@@ -26,11 +26,12 @@
         <param name="expansion_x_speed" value="1.0" type="double"/>
         <param name="expansion_y_speed" value="1.0" type="double"/>
         <param name="expansion_yaw_speed" value="3.0" type="double"/>
-        <param name="alpha_th" value="1.1" type="double"/>
+        <param name="alpha_th" value="1.5" type="double"/>
         <param name="reset_limit" value="1000" type="int"/>
         <param name="simple_reset_x_sigma" value="0.50" type="double"/>
         <param name="simple_reset_y_sigma" value="0.50" type="double"/>
         <param name="simple_reset_yaw_sigma" value="1.0" type="double"/>
+
     </node>
     <node pkg="rviz" name="rviz" type="rviz" args="-d $(find chibi21_b)/config/Localizer.rviz" output="screen"/>
 </launch>

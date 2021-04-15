@@ -12,6 +12,8 @@
 #include<nav_msgs/OccupancyGrid.h>
 #include<random>
 #include<tf/tf.h>
+#include<tf/transform_broadcaster.h>
+#include<tf/transform_listener.h>
 class Localizer
 {
     public:
@@ -112,9 +114,4 @@ class Localizer
 
 };
 
-struct Coordinates
-{
-    double x;
-    double y;
-};
 #endif
