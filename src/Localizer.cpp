@@ -1,5 +1,6 @@
 #include<Localizer/Localizer.h>
 std::random_device seed;
+std::mt19937 engine(seed());
 Localizer::Localizer():private_nh("~")
 {
     private_nh.getParam("hz", hz);
@@ -82,7 +83,6 @@ Localizer::Particle Localizer::make_particle()
 
 double Localizer::gaussian(double mu, double sigma)
 {
-    std::mt19937 engine(seed());
     std::normal_distribution<> dist(mu, sigma);
     return dist(engine);
 }
