@@ -1,8 +1,8 @@
 #ifndef LOCAL_PATH_PLANNER
-#define LOCAL_PATH_PLANNER
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
@@ -50,11 +50,13 @@ class DynamicWindowApproach
         double ANGULAR_SPEED_MAX;
         double LINEAR_ACCL;
         double ANGULAR_ACCL;
+        double ROBOT_RADIUS;
 
         //cost gain
         double COST_HEADING_GAIN;
         double COST_VELOCITY_GAIN;
         double COST_OBSTACLE_GAIN;
+        double COST_HEADING_OBS_GAIN;
 
         //trajectories
         State current_state;
@@ -62,9 +64,9 @@ class DynamicWindowApproach
         std::vector<State> best_traj;
         std::vector<std::vector<State>> trajectories;
         std::vector<std::vector<double>> obs_list;
+        std::vector<std::vector<double>> map_frame_obs_list;
         sensor_msgs::LaserScan scan;
         geometry_msgs::PoseStamped estimated_pose;
-        // geometry_msgs::PoseStamped local_goal_sim;
         nav_msgs::Odometry odometry;
         double PREDICT_TIME;
 
@@ -76,10 +78,12 @@ class DynamicWindowApproach
         void twist_to_odometry_callback(const geometry_msgs::Twist::ConstPtr &);
         void calc_dynamic_window();
         void calc_trajectory();
-        void roomba_motion(State&, double, double);
+        void roomba_motion(State&, double, double, double);
         double calc_cost_heading(State&);
-        double calc_cost_velocity(double);
+        double calc_cost_velocity(double,double);
         double calc_cost_obstacle(std::vector<State>&);
+        double calc_cost_heading_obs(std::vector<std::vector<double>>&, double);
+        void map_to_robot_frame(double, double, double, std::vector<double>&);
         void scan_to_obs();
         void init();
 
@@ -97,8 +101,10 @@ class DynamicWindowApproach
         //rviz
         ros::Publisher pub_best_traj;
         ros::Publisher pub_trajectries;
-        // ros::Publisher pub_local_goal;
+        ros::Publisher pub_obs;
+        ros::Publisher pub_obs_robot_frame;
         void visualize_traj(std::vector<State>&,const ros::Publisher&);
+        void visualize_obs(double,double,const ros::Publisher&);
         // void visualize_trajectories();
 };
 #endif

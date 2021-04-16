@@ -8,10 +8,14 @@ Dummy::Dummy():private_nh("~")
     private_nh.param("pre_yaw",pre_yaw,{0.0});
     private_nh.param("ROBOT_FRAME",ROBOT_FRAME,{"base_link"});
     private_nh.param("MAP_FRAME",MAP_FRAME,{"map"});
+    private_nh.param("LOCAL_GOAL_X",LOCAL_GOAL_X,{10.0});
+    private_nh.param("LOCAL_GOAL_Y",LOCAL_GOAL_Y,{10.0});
+    private_nh.param("LOCAL_GOAL_YAW",LOCAL_GOAL_YAW,{0.0});
 
     pub_estimated_pose=nh.advertise<geometry_msgs::PoseStamped>("/dummy_estimated_pose",1);
     pub_local_goal=nh.advertise<geometry_msgs::PoseStamped>("/dummy_local_goal",1);
     pub_twist=nh.advertise<geometry_msgs::Twist>("/dummy_twist",1);
+    // pub_obstacle=nh.advertise<geometry_msgs::PoseArray>("/dummy_obstacle",1);
 
     sub_cmd_vel=nh.subscribe("/roomba/control",100,&Dummy::cmd_vel_callback,this);
 }
@@ -52,13 +56,13 @@ void Dummy::dummy_local_goal()
     local_goal.header.frame_id=MAP_FRAME;
     local_goal.header.stamp=ros::Time::now();
 
-    local_goal.pose.position.x=-20.0;
-    local_goal.pose.position.y=-10.0;
+    local_goal.pose.position.x=LOCAL_GOAL_X;
+    local_goal.pose.position.y=LOCAL_GOAL_Y;
     local_goal.pose.position.z=0.0;
     local_goal.pose.orientation.x=0.0;
     local_goal.pose.orientation.y=0.0;
-    local_goal.pose.orientation.z=0.0;
-    local_goal.pose.orientation.w=1.0;
+    local_goal.pose.orientation.z=std::sin(LOCAL_GOAL_YAW/2.0);
+    local_goal.pose.orientation.w=std::cos(LOCAL_GOAL_YAW/2.0);
 
     pub_local_goal.publish(local_goal);
 }
@@ -74,8 +78,37 @@ void Dummy::dummy_twist()
     twist.angular.y=0.0;
     twist.angular.z=cmd_vel.cntl.angular.z;
 
+    // ROS_INFO_STREAM("linear.x = "<<twist.linear.x<<" || linear.y = "<<twist.linear.y<<" || angular.z = "<<twist.angular.z);
     pub_twist.publish(twist);
 }
+
+void Dummy::dummy_obstacle()
+{
+/*    std::vector<double> obs_list={
+        {5.0,5.0},
+        {3.0,7,0},
+        {3.0,5.0},
+        {5.0,3.0}
+    };
+
+    geometry_msgs::PoseArray pub_obs_list;
+    pub_obs_list.header.stamp=ros::Time::now();
+    pub_obs_list.header.frame_id=MAP_FRAME;
+
+    geometry_msgs::Pose obs_point;
+    for(auto& obs:obs_list){
+        obs_point.position.x=obs[0];
+        obs_point.position.y=obs[1];
+        obs_point.position.z=0;
+        obs_point.orientation.x=0;
+        obs_point.orientation.y=0;
+        obs_point.orientation.z=0;
+        obs_point.orientation.w=0;
+
+        // pub_obs_list.push_back(obs_point);
+    }
+    pub_obstacle.publish(pub_obs_list);
+*/}
 
 void Dummy::process()
 {
@@ -84,6 +117,7 @@ void Dummy::process()
         dummy_estimated_pose();
         dummy_local_goal();
         dummy_twist();
+        // dummy_obstacle();
 
         ros::spinOnce();
         loop_rate.sleep();
