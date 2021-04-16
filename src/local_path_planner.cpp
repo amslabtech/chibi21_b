@@ -108,9 +108,9 @@ void DynamicWindowApproach::calc_trajectory()
     double resolution_omega=(dw.omega_max-dw.omega_min)/RESOLUTION_OMEGA_NUM;
 
     double cost_min=1e9;
-    double cost_heading_min=1e6;
-    double cost_velocity_min=1e6;
-    double cost_obstacle_min=1e6;
+    // double cost_heading_min=1e6;
+    // double cost_velocity_min=1e6;
+    // double cost_obstacle_min=1e6;
     double best_velocity=0.0;
     double best_omega=0.0;
 
@@ -135,7 +135,7 @@ void DynamicWindowApproach::calc_trajectory()
             double cost_heading=calc_cost_heading(traj.back());
             double cost_velocity=calc_cost_velocity(v,w*omega_direction);
             double cost_obstacle=calc_cost_obstacle(traj);
-            double cost_obstacle_min=calc_cost_obstacle(traj);
+            // double cost_obstacle_min=calc_cost_obstacle(traj);
             double cost_heading_obs=0.0;
             if(USE_DUMMY_TOPIC) cost_heading_obs=calc_cost_heading_obs(map_frame_obs_list,w*omega_direction);
             else  cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
@@ -143,9 +143,9 @@ void DynamicWindowApproach::calc_trajectory()
 
             if(cost_sum<=cost_min){
                 cost_min=cost_sum;
-                cost_heading_min=cost_heading;
-                cost_velocity_min=cost_velocity;
-                cost_obstacle_min=cost_obstacle;
+                // cost_heading_min=cost_heading;
+                // cost_velocity_min=cost_velocity;
+                // cost_obstacle_min=cost_obstacle;
                 best_traj=traj;
                 best_velocity=v;
                 best_omega=w*omega_direction;
@@ -156,10 +156,10 @@ void DynamicWindowApproach::calc_trajectory()
             }
         }
     }
-    if(cost_obstacle_min>=1e3){
+    // if(cost_obstacle_min>=1e3){
         // best_velocity=0.0;
         // best_omega=1.0;
-    }
+    // }
     // ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || cost_min = "<<cost_min<<" || cost_heading_min = "<<cost_heading_min<<" || cost_velocity_min = "<<cost_velocity_min<<" || count = "<<count);
     ROS_INFO_STREAM("best_omega = "<<best_omega);
 
