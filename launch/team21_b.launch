@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="map_file" default="$(find chibi21_b)/map/map.yaml"/>
+    <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen"/>
+    <node pkg="chibi21_b" type="Localizer" name="Localizer" output="screen">
+        <param name="hz" value="10" type="int"/>
+        <param name="particle_number" value="500" type="int"/>
+        <param name="init_x" value="0.0" type="double"/>
+        <param name="init_y" value="0.0" type="double"/>
+        <param name="init_yaw" value="0.0" type="double"/>
+        <param name="init_x_sigma" value="0.5" type="double"/>
+        <param name="init_y_sigma" value="0.5" type="double"/>
+        <param name="init_yaw_sigma" value="0.5" type="double"/>
+        <param name="move_noise_ratio" value="0.1" type="double"/>
+        <param name="laser_noise_ratio" value="0.1" type="double"/>
+        <param name="search_range" value="30.0" type="double"/>
+        <param name="step_count" value="10" type="int"/>
+        <param name="alpha_slow_th" value="0.001" type="double"/>
+        <param name="alpha_fast_th" value="0.1" type="double"/>
+        <param name="reset_x_sigma" value="0.05" type="double"/>
+        <param name="reset_y_sigma" value="0.05" type="double"/>
+        <param name="reset_yaw_sigma" value="0.05" type="double"/>
+        <param name="expansion_x_speed" value="0.01" type="double"/>
+        <param name="expansion_y_speed" value="0.01" type="double"/>
+        <param name="expansion_yaw_speed" value="0.01" type="double"/>
+        <param name="alpha_th" value="1.4" type="double"/>
+        <param name="reset_limit" value="200" type="int"/>
+
+    </node>
+    <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner" output="screen">
+        <param name="RESOLUTION_VELOCITY_NUM" value="5"/>
+        <param name="RESOLUTION_OMEGA_NUM" value="5"/>
+        <param name="DT" value="0.05"/>
+        <param name="ROBOT_FRAME" value="map"/>
+        <param name="LINEAR_SPEED_MAX" value="0.7"/>
+        <param name="LINEAR_SPEED_MIN" value="0.1"/>
+        <param name="ANGULAR_SPEED_MAX" value="3.0"/>
+        <param name="LINEAR_ACCL" value="5.0"/>
+        <param name="ANGULAR_ACCL" value="5.0"/>
+        <param name="COST_HEADING_GAIN" value="12.5"/>
+        <param name="COST_VELOCITY_GAIN" value="4.0"/>
+        <param name="COST_OBSTACLE_GAIN" value="1.4"/>
+        <param name="COST_HEADING_OBS_GAIN" value="200.0"/>
+        <param name="PREDICT_TIME" value="3.0"/>
+        <param name="ROBOT_RADIUS" value="1.0"/>
+
+        <param name="USE_DUMMY_TOPIC" value="false"/>
+    </node>
+    <node pkg="chibi21_b" type="Global_path_planner" name="Global_path_planner"/>
+    <node pkg="chibi21_b" type="local_goal_creator" name="local_goal_creator"/>
+
+    <node name="urg_node" pkg="urg_node" type="urg_node">
+        <param name="serial_port" value="/dev/ttyACM0"/>
+    </node>
+    <node name="roomba_500driver_meiji" pkg="roomba_500driver_meiji" type="main500">
+        <param name="serial_port" value="/dev/ttyUSB0"/>
+    </node>
+</launch>
