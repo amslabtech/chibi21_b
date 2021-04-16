@@ -352,35 +352,35 @@ void Localizer::process()
         if(map_get_ok && odometry_get_ok){
             try{
 
-            //map座標で見たbase_linkの位置の取得
-            double map_to_base_x = mcl_pose.pose.position.x;
-            double map_to_base_y = mcl_pose.pose.position.y;
-            double map_to_base_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
-            //odom座標で見たbase_linkの位置の取得
-            double odom_to_base_x = current_odometry.pose.pose.position.x;
-            double odom_to_base_y = current_odometry.pose.pose.position.y;
-            double odom_to_base_yaw = create_yaw_from_msg(current_odometry.pose.pose.orientation);
-            //map座標で見たodom座標の位置の取得
-            double map_to_odom_x = odom_to_base_x - map_to_base_x;
-            double map_to_odom_y = odom_to_base_y - map_to_base_y;
-            double map_to_odom_yaw =  substract_yawA_from_yawB(odom_to_base_yaw, map_to_base_yaw);
-            geometry_msgs::Quaternion map_to_odom_quat;
-            quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
+                //map座標で見たbase_linkの位置の取得
+                double map_to_base_x = mcl_pose.pose.position.x;
+                double map_to_base_y = mcl_pose.pose.position.y;
+                double map_to_base_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
+                //odom座標で見たbase_linkの位置の取得
+                double odom_to_base_x = current_odometry.pose.pose.position.x;
+                double odom_to_base_y = current_odometry.pose.pose.position.y;
+                double odom_to_base_yaw = create_yaw_from_msg(current_odometry.pose.pose.orientation);
+                //map座標で見たodom座標の位置の取得
+                double map_to_odom_x = odom_to_base_x - map_to_base_x;
+                double map_to_odom_y = odom_to_base_y - map_to_base_y;
+                double map_to_odom_yaw =  substract_yawA_from_yawB(odom_to_base_yaw, map_to_base_yaw);
+                geometry_msgs::Quaternion map_to_odom_quat;
+                quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
 
-            //odom座標系の元となるodomの位置姿勢情報格納用変数の作成
-            geometry_msgs::TransformStamped odom_state;
-            //現在時刻の格納
-            odom_state.header.stamp = ros::Time::now();
-            //座標系mapとodomの指定
-            odom_state.header.frame_id = "map";
-            odom_state.child_frame_id = "odom";
-            //map座標系からみたbase_link座標系の原点位置と方向の格納
-            odom_state.transform.translation.x = map_to_odom_x;
-            odom_state.transform.translation.y = map_to_odom_y;
-            odom_state.transform.translation.z = 0;
-            odom_state.transform.rotation = map_to_odom_quat;
-            //tf情報をbroadcast(座標系の設定)
-            odom_state_broadcaster.sendTransform(odom_state);
+                //odom座標系の元となるodomの位置姿勢情報格納用変数の作成
+                geometry_msgs::TransformStamped odom_state;
+                //現在時刻の格納
+                odom_state.header.stamp = ros::Time::now();
+                //座標系mapとodomの指定
+                odom_state.header.frame_id = "map";
+                odom_state.child_frame_id = "odom";
+                //map座標系からみたbase_link座標系の原点位置と方向の格納
+                odom_state.transform.translation.x = map_to_odom_x;
+                odom_state.transform.translation.y = map_to_odom_y;
+                odom_state.transform.translation.z = 0;
+                odom_state.transform.rotation = map_to_odom_quat;
+                //tf情報をbroadcast(座標系の設定)
+                odom_state_broadcaster.sendTransform(odom_state);
             }
             catch(tf::TransformException &ex){
                 ROS_ERROR("%s", ex.what());
@@ -447,9 +447,11 @@ double Localizer::calc_w(geometry_msgs::PoseStamped pose)
 {
     double weight = 0;
     for(int i=0; i<laser.ranges.size(); i+=step_count){
-        double angle = i * laser.angle_increment + laser.angle_min;
-        double dist_to_wall = dist_from_p_to_wall(pose.pose.position.x, pose.pose.position.y, create_yaw_from_msg(pose.pose.orientation) + angle);
-        weight += gaussian(laser.ranges[i], laser.ranges[i] * laser_noise, dist_to_wall);
+        if(laser.ranges[i] > 0.2){
+            double angle = i * laser.angle_increment + laser.angle_min;
+            double dist_to_wall = dist_from_p_to_wall(pose.pose.position.x, pose.pose.position.y, create_yaw_from_msg(pose.pose.orientation) + angle);
+            weight += gaussian(laser.ranges[i], laser.ranges[i] * laser_noise, dist_to_wall);
+        }
     }
     return weight;
 }
