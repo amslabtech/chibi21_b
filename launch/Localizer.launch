@@ -11,8 +11,8 @@
         <param name="init_x" value="0.0" type="double"/>
         <param name="init_y" value="0.0" type="double"/>
         <param name="init_yaw" value="0.0" type="double"/>
-        <param name="init_x_sigma" value="0.1" type="double"/>
-        <param name="init_y_sigma" value="0.1" type="double"/>
+        <param name="init_x_sigma" value="0.5" type="double"/>
+        <param name="init_y_sigma" value="0.5" type="double"/>
         <param name="init_yaw_sigma" value="0.3" type="double"/>
         <param name="move_noise_ratio" value="0.1" type="double"/>
         <param name="laser_noise" value="0.1" type="double"/>

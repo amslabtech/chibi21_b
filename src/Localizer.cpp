@@ -290,7 +290,7 @@ void Localizer::observation_update()
     }
     estimate_pose();
     double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / step_count);
-    //std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
+    std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
     //resampling_particle();
     if(alpha_slow == 0){
         alpha_slow = alpha;
