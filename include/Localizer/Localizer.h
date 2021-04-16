@@ -6,14 +6,15 @@
 #include<roomba_500driver_meiji/RoombaCtrl.h>
 #include<tf/tf.h>
 #include<sensor_msgs/LaserScan.h>
-#include<geometry_msgs/PoseWithCovarianceStamped.h>
 #include<geometry_msgs/PoseStamped.h>
 #include<geometry_msgs/PoseArray.h>
 #include<nav_msgs/OccupancyGrid.h>
 #include<random>
-#include<tf/tf.h>
 #include<tf/transform_broadcaster.h>
-#include<tf/transform_listener.h>
+
+std::random_device seed;
+std::mt19937 engine(seed());
+
 class Localizer
 {
     public:
@@ -40,8 +41,14 @@ class Localizer
         void map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
 
         Particle make_particle();
-        double gaussian(double mu, double sigma);
-        double gaussian(double mu, double sigma, double x);
+        double gaussian(double mu, double sigma){
+            std::normal_distribution<> dist(mu, sigma);
+            return dist(engine);
+        }
+        double gaussian(double mu, double sigma, double x){
+            double ans = exp(-std::pow((mu - x), 2) / std::pow(sigma, 2) / 2.0) / sqrt(2.0 * M_PI * std::pow(sigma, 2));
+            return ans;
+        }
         void create_p_pose_array_from_p_array(std::vector<Particle> p_array);
         double substract_yawA_from_yawB(double yawA, double yawB);
         double adjust_yaw(double yaw);
@@ -52,12 +59,10 @@ class Localizer
         double dist_from_p_to_wall(double x, double y, double yaw);
         double calc_w(geometry_msgs::PoseStamped pose);
         void normalize_w();
-        //void normal_resampling();
         void adaptive_resampling();
         void observation_update();
         void estimate_pose();
         void expansion_reset();
-        //void simple_reset();
 
         int hz;
         int particle_number;
@@ -81,9 +86,6 @@ class Localizer
         double expansion_yaw_speed;
         double alpha_th;
         double reset_limit;
-        double simple_reset_x_sigma;
-        double simple_reset_y_sigma;
-        double simple_reset_yaw_sigma;
 
         double alpha = 0;
         double alpha_slow = alpha;
