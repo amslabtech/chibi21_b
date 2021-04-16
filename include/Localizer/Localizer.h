@@ -34,10 +34,8 @@ class Localizer
 
 
                 Localizer* mcl;
-                ros::NodeHandle private_nh;
         };
         void laser_callback(const sensor_msgs::LaserScan::ConstPtr &msg);
-
         void odometry_callback(const nav_msgs::Odometry::ConstPtr &msg);
         void map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg);
 
@@ -54,12 +52,12 @@ class Localizer
         double dist_from_p_to_wall(double x, double y, double yaw);
         double calc_w(geometry_msgs::PoseStamped pose);
         void normalize_w();
-        void normal_resampling();
+        //void normal_resampling();
         void adaptive_resampling();
         void observation_update();
         void estimate_pose();
         void expansion_reset();
-        void simple_reset();
+        //void simple_reset();
 
         int hz;
         int particle_number;
