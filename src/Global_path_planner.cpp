@@ -11,7 +11,7 @@ AStarPath::AStarPath():private_nh("")
     sub_map = nh.subscribe("/map",10,&AStarPath::map_callback,this);
     pub_map = nh.advertise<nav_msgs::OccupancyGrid>("/map",1);
     pub_path = nh.advertise<nav_msgs::Path>("/path",1);
-    pub_goal = nh.advertise<geometry_msgs::PoseStamped>("/mini_goal",1);
+    //pub_goal = nh.advertise<geometry_msgs::PoseStamped>("/mini_goal",1);
 
 }
 
@@ -32,7 +32,8 @@ void AStarPath::map_callback(const nav_msgs::OccupancyGrid::ConstPtr &msg)
         {
             for(int j=0;j<col;j++)
             {
-                map_grid[i][j] = the_map.data[j+i*row];
+                //map_grid[i][j] = the_map.data[j+i*row];
+                map_grid[i][j] = the_map.data[i+j*row];
             }
         }
 
@@ -57,7 +58,8 @@ void AStarPath::thick_wall()
             for(int j=0;j<col;j++)
             {
                 //map_cleaner
-                if((i>2282 && i<2295 && j>1547 && j<2213) || (i>1997 && i<2282 && j>1540 && j<1555) || (i>1995 && i<2007 && j>1547 && j<2213) || (i>2003 && i<2290 && j>2205 && j<2220))
+                //if((i>2282 && i<2295 && j>1547 && j<2213) || (i>1997 && i<2282 && j>1540 && j<1555) || (i>1995 && i<2007 && j>1547 && j<2213) || (i>2003 && i<2290 && j>2205 && j<2220))
+                if((j>2282 && j<2295 && i>1547 && i<2213) || (j>1997 && j<2282 && i>1540 && i<1555) || (j>1995 && j<2007 && i>1547 && i<2213) || (j>2003 && j<2290 && i>2205 && i<2220))
                 {
                     if(map_grid[i][j]==100)
                     {
@@ -145,16 +147,10 @@ void AStarPath::thick_wall()
 
         }*/
 
-        /*map_grid[2000][1550] = 80;
-        map_grid[2001][1550] = 80;
-        map_grid[2000][2210] = 80;
-        map_grid[2001][2210] = 80;
-        map_grid[2285][1550] = 80;
-        map_grid[2286][1550] = 80;
-        map_grid[2285][2210] = 80;
-        map_grid[2286][2210] = 80;
-        map_grid[2285][1890] = 80;
-        map_grid[2286][1891] = 80;*/
+        map_grid[1550][2000] = 80;
+        map_grid[2210][2000] = 80;
+        map_grid[1550][2285] = 80;
+        map_grid[2210][2285] = 80;
 
         res = the_map.info.resolution;
         std::cout<<res<<std::endl;
@@ -169,7 +165,8 @@ void AStarPath::thick_wall()
         {
             for(int j=0;j<col;j++)
             {
-                the_map.data[j+i*row] = map_grid[i][j];
+                //the_map.data[j+i*row] = map_grid[i][j];
+                the_map.data[i+j*row] = map_grid[i][j];
             }
         }
 
@@ -185,7 +182,8 @@ void AStarPath::thick_wall()
 void AStarPath::set_goal()
 {
     //goal = {{2285,1890},{2285,1550},{2000,1550},{2000,2210},{2285,2210},{2285,1890}}; スタート位置間違えてた。↓が正しい方です。
-    goal = {{2000,1890},{2000,2210},{2285,2210},{2285,1550},{2000,1550},{2000,1890}};
+    //goal = {{2000,1890},{2000,2210},{2285,2210},{2285,1550},{2000,1550},{2000,1890}};
+    goal = {{1890,2000},{2210,2000},{2210,2285},{1550,2285},{1550,2000},{1890,2000}};
     //goal[0]:startpoint
     //goal[5]:goalpoint
     std::cout<<"set_goal"<<std::endl;
@@ -241,13 +239,11 @@ void AStarPath::A_star()
     for(int i=0;i<5;i++)
     {
         mini_path.poses.clear();
-        //goal_point.pose.clear();
         make_heuristic(i+1);
         reached = false;
         goal_point.header.frame_id = "map";
         goal_point.pose.position.x = goal[i+1].x;
         goal_point.pose.position.y = goal[i+1].y;
-        pub_goal.publish(goal_point);
 
         close_list = std::vector<std::vector<open>>(row,std::vector<open>(col));
         for(int r=0;r<row;r++)
@@ -369,8 +365,8 @@ void AStarPath::A_star()
         //mini_path
         mini_path.header.frame_id = "map";
         geometry_msgs::PoseStamped point;
-        point.pose.position.y = (x-row/2)*res;// + origin.x;
-        point.pose.position.x = (y-col/2)*res;// + origin.y;
+        point.pose.position.x = (x-row/2)*res;// + origin.x;
+        point.pose.position.y = (y-col/2)*res;// + origin.y;
         mini_path.poses.push_back(point);
 
         mom.x = close_list[x][y].pre_x;
@@ -382,16 +378,16 @@ void AStarPath::A_star()
         {
             if(mom.x == goal[i].x && mom.y == goal[i].y)
             {
-                point.pose.position.y = (mom.x-row/2)*res;
-                point.pose.position.x = (mom.y-col/2)*res;
+                point.pose.position.x = (mom.x-row/2)*res;
+                point.pose.position.y = (mom.y-col/2)*res;
                 mini_path.poses.push_back(point);
                 startpoint = true;
             }
 
             else
             {
-                    point.pose.position.y = (mom.x-row/2)*res;// + origin.x;
-                    point.pose.position.x = (mom.y-col/2)*res;// + origin.y;
+                    point.pose.position.x = (mom.x-row/2)*res;// + origin.x;
+                    point.pose.position.y = (mom.y-col/2)*res;// + origin.y;
                     mini_path.poses.push_back(point);
 
                     dad.x = mom.x;
@@ -423,14 +419,14 @@ void AStarPath::process()
             //std::cout<<"ok1"<<std::endl;
             thick_wall();
             set_goal();
-            /*if(!heu_checker)
+            if(!heu_checker)
             {
                 for(int i=0;i<5;i++)
                 {
-                    make_heuristic(i+1,i);
+                    make_heuristic(i+1);
                 }
                 heu_checker = true;
-            }*/
+            }
             A_star();
             std::cout<<"ok2"<<std::endl;
             pub_path.publish(global_path);

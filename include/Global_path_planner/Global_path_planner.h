@@ -42,7 +42,6 @@ class AStarPath
         void make_heuristic(int); //heuristic関数をつくる
         void A_star(); //A*プロセス
 
-
         //parameter
         int hz;
         //mapを2次元にする
@@ -57,11 +56,8 @@ class AStarPath
 
         std::vector<twod> goal; //set_goal
 
-
-
         std::vector<std::vector<open>> close_list;
         std::vector<std::vector<open>> open_list;
-        open next;
 
         float res;
 
@@ -98,11 +94,12 @@ class AStarPath
         ros::Publisher pub_map;
         ros::Publisher pub_path;
         ros::Publisher pub_goal;
+
         nav_msgs::OccupancyGrid the_map;//map格納
         nav_msgs::Path global_path;//Local_path_plannerにおくる
         nav_msgs::Path mini_path;//仮のゴール間のpath
         geometry_msgs::PoseStamped goal_point;//今目指してるゴール
-        geometry_msgs::PoseStamped mcl_pose;//Localizerからもらう
+        //geometry_msgs::PoseStamped mcl_pose;//Localizerからもらう
 
 
 };
