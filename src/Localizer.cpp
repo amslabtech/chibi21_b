@@ -115,24 +115,14 @@ void Localizer::motion_update()
         p_array[i].p_move(dtrans, drot1, drot2);
     }
 }
-
+/*
 int Localizer::xy_to_map_index(double x, double y)
 {
     int index_x = int((x - map.info.origin.position.x) / map.info.resolution);
     int index_y = int((y - map.info.origin.position.y) / map.info.resolution);
     return index_x + index_y * map.info.width;
 }
-
-bool Localizer::map_range_check(double x, double y)
-{
-    double x_first = map.info.origin.position.x;
-    double y_first = map.info.origin.position.y;
-    double x_last = x_first + map.info.width * map.info.resolution;
-    double y_last = y_first + map.info.height * map.info.resolution;
-
-    if(x_first <= x && x <= x_last && y_first <= y && y <= y_last){return true;}
-    else{return false;}
-}
+*/
 
 double Localizer::dist_from_p_to_wall(double x, double y, double yaw)
 {
@@ -347,7 +337,7 @@ void Localizer::Particle::set_p(double x, double y, double yaw, double x_sigma, 
         quaternionTFToMsg(tf::createQuaternionFromYaw(yaw),p_pose.pose.orientation);
     }while(mcl->map.data[mcl->xy_to_map_index(p_pose.pose.position.x, p_pose.pose.position.y)] != 0);
 }
-
+/*
 double Localizer::create_yaw_from_msg(geometry_msgs::Quaternion q)
 {
     double roll, pitch, yaw;
@@ -355,7 +345,7 @@ double Localizer::create_yaw_from_msg(geometry_msgs::Quaternion q)
     tf::Matrix3x3(quaternion).getRPY(roll, pitch, yaw);
     return yaw;
 }
-
+*/
 double Localizer::substract_yawA_from_yawB(double yawA, double yawB)
 {
     double dyaw = yawB - yawA;

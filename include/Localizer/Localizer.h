@@ -52,10 +52,20 @@ class Localizer
         void create_p_pose_array_from_p_array(std::vector<Particle> p_array);
         double substract_yawA_from_yawB(double yawA, double yawB);
         double adjust_yaw(double yaw);
-        double create_yaw_from_msg(geometry_msgs::Quaternion q);
+        double create_yaw_from_msg(geometry_msgs::Quaternion q)
+        {
+            double roll, pitch, yaw;
+            tf::Quaternion quaternion(q.x, q.y, q.z, q.w);
+            tf::Matrix3x3(quaternion).getRPY(roll, pitch, yaw);
+            return yaw;
+        }
         void motion_update();
-        int xy_to_map_index(double x, double y);
-        bool map_range_check(double x, double y);
+        int xy_to_map_index(double x, double y)
+        {
+            int index_x = int((x - map.info.origin.position.x) / map.info.resolution);
+            int index_y = int((y - map.info.origin.position.y) / map.info.resolution);
+            return index_x + index_y * map.info.width;
+        }
         double dist_from_p_to_wall(double x, double y, double yaw);
         double calc_w(geometry_msgs::PoseStamped pose);
         void normalize_w();
