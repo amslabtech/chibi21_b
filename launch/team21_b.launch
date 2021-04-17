@@ -28,7 +28,7 @@
         <param name="reset_limit" value="200" type="int"/>
 
     </node>
-    <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner" >
+    <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner" output="screen">
         <param name="RESOLUTION_VELOCITY_NUM" value="5"/>
         <param name="RESOLUTION_OMEGA_NUM" value="10"/>
         <param name="DT" value="0.05"/>
@@ -48,7 +48,7 @@
         <param name="USE_DUMMY_TOPIC" value="false"/>
     </node>
     <node pkg="chibi21_b" type="Global_path_planner" name="Global_path_planner"/>
-    <node pkg="chibi21_b" type="local_goal_creator" name="local_goal_creator" output="screen"/>
+    <node pkg="chibi21_b" type="local_goal_creator" name="local_goal_creator" />
 
     <node name="urg_node" pkg="urg_node" type="urg_node">
         <param name="serial_port" value="/dev/ttyACM0"/>

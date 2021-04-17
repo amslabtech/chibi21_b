@@ -18,10 +18,10 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
     private_nh.param("COST_HEADING_OBS_GAIN",COST_HEADING_OBS_GAIN,{1.0});
     private_nh.param("PREDICT_TIME",PREDICT_TIME,{3.0});
     private_nh.param("USE_DUMMY_TOPIC",USE_DUMMY_TOPIC,{false});
-    private_nh.param("flag_scan",flag_scan,{false});
-    private_nh.param("flag_mcl_pose",flag_mcl_pose,{false});
-    private_nh.param("flag_local_goal",flag_local_goal,{false});
-    private_nh.param("flag_odom",flag_odom,{false});
+    private_nh.param("flag_scan",flag_scan,{true});
+    private_nh.param("flag_mcl_pose",flag_mcl_pose,{true});
+    private_nh.param("flag_local_goal",flag_local_goal,{true});
+    private_nh.param("flag_odom",flag_odom,{true});
 
     sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
     sub_estimated_pose=nh.subscribe("/mcl_pose",100,&DynamicWindowApproach::estimated_pose_callback,this);
@@ -123,49 +123,49 @@ void DynamicWindowApproach::calc_trajectory()
     double best_omega=0.0;
 
     int count=0;
-    for(double v=dw.vel_max;v>=dw.vel_min;v-=resolution_velocity){
-        for(double w=0.0;w<=dw.omega_max;w+=resolution_omega){
-            for(double omega_direction=1;omega_direction>=-1;omega_direction-=2){
-            State state;
-            state.x=0.0;
-            state.y=0.0;
-            state.yaw=0.0;
-            state.velocity=current_state.velocity;
-            state.omega=current_state.omega;
+    for(double v=dw.vel_max; v>=dw.vel_min; v-=resolution_velocity){
+        for(double w=0.0; w<=dw.omega_max; w+=resolution_omega){
+            for(double omega_direction=1.0; omega_direction>=-1.0; omega_direction-=2.0){
+                State state;
+                state.x=0.0;
+                state.y=0.0;
+                state.yaw=0.0;
+                state.velocity=current_state.velocity;
+                state.omega=current_state.omega;
 
-            std::vector<State> traj;
-            for(double t=0;t<=PREDICT_TIME;t+=DT){
-                roomba_motion(state,v,w*omega_direction,DT);
-                traj.push_back(state);
-            }
-            trajectories.push_back(traj);
-            visualize_traj(trajectories[count],pub_trajectries);
-            double cost_heading=calc_cost_heading(traj.back());
-            double cost_velocity=calc_cost_velocity(v,w*omega_direction);
-            double cost_obstacle=calc_cost_obstacle(traj);
-            // double cost_obstacle_min=calc_cost_obstacle(traj);
-            double cost_heading_obs=0.0;
-            if(USE_DUMMY_TOPIC) cost_heading_obs=calc_cost_heading_obs(map_frame_obs_list,w*omega_direction);
-            else{
-                scan_to_obs();
-                cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
-            }
-            double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle+COST_HEADING_OBS_GAIN*cost_heading_obs;
+                std::vector<State> traj;
+                for(double t=0.0;t<=PREDICT_TIME;t+=DT){
+                    roomba_motion(state,v,w*omega_direction,DT);
+                    traj.push_back(state);
+                }
+                trajectories.push_back(traj);
+                visualize_traj(trajectories[count],pub_trajectries);
+                double cost_heading=calc_cost_heading(traj.back());
+                double cost_velocity=calc_cost_velocity(v,w*omega_direction);
+                double cost_obstacle=calc_cost_obstacle(traj);
+                // double cost_obstacle_min=calc_cost_obstacle(traj);
+                double cost_heading_obs=0.0;
+                if(USE_DUMMY_TOPIC) cost_heading_obs=calc_cost_heading_obs(map_frame_obs_list,w*omega_direction);
+                else{
+                    // scan_to_obs();
+                    // cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
+                }
+                double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle+COST_HEADING_OBS_GAIN*cost_heading_obs;
 
-            if(cost_sum<=cost_min){
-                cost_min=cost_sum;
-                // cost_heading_min=cost_heading;
-                // cost_velocity_min=cost_velocity;
-                // cost_obstacle_min=cost_obstacle;
-                best_traj=traj;
-                best_velocity=v;
-                best_omega=w*omega_direction;
-                // ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega<<" || count = "<<count);
-            }
-            count++;
-
+                if(cost_sum<=cost_min){
+                    cost_min=cost_sum;
+                    // cost_heading_min=cost_heading;
+                    // cost_velocity_min=cost_velocity;
+                    // cost_obstacle_min=cost_obstacle;
+                    best_traj=traj;
+                    best_velocity=v;
+                    best_omega=w*omega_direction;
+                    // ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega<<" || count = "<<count);
+                }
+                count++;
             }
         }
+        if(count > RESOLUTION_VELOCITY_NUM*RESOLUTION_OMEGA_NUM) break;
     }
     // if(cost_obstacle_min>=1e3){
         // best_velocity=0.0;
