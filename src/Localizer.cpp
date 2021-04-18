@@ -1,6 +1,8 @@
 #include<Localizer/Localizer.h>
-//std::random_device seed;
-//std::mt19937 engine(seed());
+std::random_device seed;
+std::mt19937 engine(seed());
+std::default_random_engine engine2(seed());
+
 Localizer::Localizer():private_nh("~")
 {
     private_nh.getParam("hz", hz);
@@ -13,7 +15,7 @@ Localizer::Localizer():private_nh("~")
     private_nh.getParam("init_yaw_sigma", init_yaw_sigma);
     private_nh.getParam("move_noise_ratio", move_noise_ratio);
     private_nh.getParam("search_range", search_range);
-    private_nh.getParam("laser_noise", laser_noise);
+    private_nh.getParam("laser_noise_ratio", laser_noise_ratio);
     private_nh.getParam("step_count", step_count);
     private_nh.getParam("alpha_slow_th", alpha_slow_th);
     private_nh.getParam("alpha_fast_th", alpha_fast_th);
@@ -77,25 +79,25 @@ Localizer::Particle Localizer::make_particle()
     Particle p(this);
     return p;
 }
-/*
+
 double Localizer::gaussian(double mu, double sigma)
 {
     std::normal_distribution<> dist(mu, sigma);
     return dist(engine);
 }
+
 double Localizer::gaussian(double mu, double sigma, double x)
 {
     double ans = exp(- std::pow((mu - x), 2) / std::pow(sigma, 2) / 2.0) / sqrt(2.0 * M_PI * std::pow(sigma, 2));
     return ans;
 }
-*/
 
-void Localizer::create_p_pose_array_from_p_array(std::vector<Particle> p_array)
+void Localizer::create_p_pose_array_from_p_array(std::vector<Particle> &p_array)
 {
     p_pose_array.poses.clear();
     p_pose_array.header.frame_id = "map";
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        p_pose_array.poses.push_back(p_array[i].p_pose.pose);
+    for(auto& p:p_array){
+        p_pose_array.poses.push_back(p.p_pose.pose);
     }
 }
 
@@ -111,27 +113,24 @@ void Localizer::motion_update()
     double drot2 = adjust_yaw(dyaw - drot1);
 
 
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        p_array[i].p_move(dtrans, drot1, drot2);
+    for(auto& p:p_array){
+        p.p_move(dtrans, drot1, drot2);
     }
 }
-/*
+
 int Localizer::xy_to_map_index(double x, double y)
 {
     int index_x = int((x - map.info.origin.position.x) / map.info.resolution);
     int index_y = int((y - map.info.origin.position.y) / map.info.resolution);
     return index_x + index_y * map.info.width;
 }
-*/
 
-double Localizer::dist_from_p_to_wall(double x, double y, double yaw)
+
+double Localizer::dist_from_p_to_wall(double x_start, double y_start, double yaw, double laser_range)
 {
-    double x_start = x;
-    double y_start = y;
     double search_step = map.info.resolution;
-    double dist_from_start = search_step;
-
-    for(dist_from_start; dist_from_start <= search_range; dist_from_start += search_step){
+    double search_limit = std::min(laser_range * (1.0 + laser_noise_ratio * 5), search_range);
+    for(double dist_from_start = search_step; dist_from_start <= search_limit; dist_from_start += search_step){
         double x_now = x_start + dist_from_start * cos(yaw);
         double y_now = y_start + dist_from_start * sin(yaw);
         int map_index = xy_to_map_index(x_now, y_now);
@@ -142,24 +141,22 @@ double Localizer::dist_from_p_to_wall(double x, double y, double yaw)
             return search_range * 2;
         }
     }
-    return search_range;
+    return search_limit;
 }
 
 void Localizer::normalize_w()
 {
     alpha = 0;
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        alpha += p_array[i].w;
+    for(auto& p:p_array){
+        alpha += p.w;
     }
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        p_array[i].w /= alpha;
+    for(auto& p:p_array){
+        p.w /= alpha;
     }
 }
 
 void Localizer::adaptive_resampling()
 {
-    //normalize_w();
-    std::default_random_engine engine2(seed());
     std::uniform_real_distribution<> random(0.0, 1.0);
 
     double r = random(engine2);
@@ -168,7 +165,7 @@ void Localizer::adaptive_resampling()
     std::vector<Particle> p_array_after_resampling;
     p_array_after_resampling.reserve(p_array.size());
     for(int i=0, size=p_array.size(); i<size; ++i){
-        r += 1 / particle_number;
+        r += 1.0 / particle_number;
         while(r > p_array[index].w){
             r -= p_array[index].w;
             index = (index + 1) % particle_number;
@@ -182,15 +179,12 @@ void Localizer::adaptive_resampling()
             Particle p = p_array[index];
             p.w = 1.0 / particle_number;
 
-            double new_x = gaussian(mcl_pose.pose.position.x, reset_x_sigma);
-            double new_y = gaussian(mcl_pose.pose.position.y, reset_y_sigma);
-            double new_yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
-            new_yaw += gaussian(0.0, reset_yaw_sigma);
-            new_yaw = adjust_yaw(new_yaw);
+            double x = mcl_pose.pose.position.x;
+            double y = mcl_pose.pose.position.y;
+            double yaw = create_yaw_from_msg(mcl_pose.pose.orientation);
 
-            p.p_pose.pose.position.x = new_x;
-            p.p_pose.pose.position.y = new_y;
-            quaternionTFToMsg(tf::createQuaternionFromYaw(new_yaw),p.p_pose.pose.orientation);
+            p.set_p(x, y, yaw, reset_x_sigma, reset_y_sigma, reset_yaw_sigma);
+
             p_array_after_resampling.push_back(p);
         }
     }
@@ -199,28 +193,23 @@ void Localizer::adaptive_resampling()
 
 void Localizer::expansion_reset()
 {
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        double new_x = gaussian(p_array[i].p_pose.pose.position.x, 0.01 * expansion_x_speed);
-        double new_y = gaussian(p_array[i].p_pose.pose.position.y, 0.01 * expansion_y_speed);
-        double new_yaw = create_yaw_from_msg(p_array[i].p_pose.pose.orientation);
-        new_yaw += gaussian(0.0, 0.01 * expansion_yaw_speed);
-        new_yaw = adjust_yaw(new_yaw);
+    for(auto& p:p_array){
+        double x = p.p_pose.pose.position.x;
+        double y = p.p_pose.pose.position.y;
+        double yaw = create_yaw_from_msg(p.p_pose.pose.orientation);
 
-        p_array[i].p_pose.pose.position.x = new_x;
-        p_array[i].p_pose.pose.position.y = new_y;
-        quaternionTFToMsg(tf::createQuaternionFromYaw(new_yaw),p_array[i].p_pose.pose.orientation);
+        p.set_p(x, y, yaw, expansion_x_speed, expansion_y_speed, expansion_yaw_speed);
     }
 }
 
 void Localizer::observation_update()
 {
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        double weight = calc_w(p_array[i].p_pose);
-        p_array[i].w = weight;
+    for(auto& p:p_array){
+        double weight = calc_w(p.p_pose);
+        p.w = weight;
     }
     estimate_pose();
     double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / step_count);
-    //std::cout << "estimated_pose_w " << estimated_pose_w << std::endl;
     if(alpha_slow == 0){
         alpha_slow = alpha;
     }
@@ -252,15 +241,14 @@ void Localizer::estimate_pose()
     double y = 0;
     double yaw = 0;
     double w_max = 0;
-    for(int i=0, size=p_array.size(); i<size; ++i){
-        x += p_array[i].p_pose.pose.position.x * p_array[i].w;
-        y += p_array[i].p_pose.pose.position.y * p_array[i].w;
-        if(p_array[i].w > w_max){
-            w_max = p_array[i].w;
-            yaw = create_yaw_from_msg(p_array[i].p_pose.pose.orientation);
+    for(auto& p:p_array){
+        x += p.p_pose.pose.position.x * p.w;
+        y += p.p_pose.pose.position.y * p.w;
+        if(p.w > w_max){
+            w_max = p.w;
+            yaw = create_yaw_from_msg(p.p_pose.pose.orientation);
         }
     }
-    yaw = adjust_yaw(yaw);
 
     mcl_pose.pose.position.x = x;
     mcl_pose.pose.position.y = y;
@@ -270,10 +258,12 @@ void Localizer::process()
 {
     //TF Broadcasterの実体化
     tf::TransformBroadcaster odom_state_broadcaster;
+    tf::TransformBroadcaster roomba_state_broadcaster;
 
     ros::Rate rate(hz);
     while(ros::ok()){
         if(map_get_ok && odometry_get_ok){
+            /*
             try{
 
                 //map座標で見たbase_linkの位置の取得
@@ -310,7 +300,35 @@ void Localizer::process()
                 ROS_ERROR("%s", ex.what());
                 ros::Duration(1.0).sleep();
             }
+            */
 
+            try{
+
+                //map座標で見たbase_linkの位置の取得
+                double map_to_roomba_x = mcl_pose.pose.position.x;
+                double map_to_roomba_y = mcl_pose.pose.position.y;
+                geometry_msgs::Quaternion map_to_roomba_quat = mcl_pose.pose.orientation;
+                //quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
+
+                //odom座標系の元となるodomの位置姿勢情報格納用変数の作成
+                geometry_msgs::TransformStamped roomba_state;
+                //現在時刻の格納
+                roomba_state.header.stamp = ros::Time::now();
+                //座標系mapとodomの指定
+                roomba_state.header.frame_id = "map";
+                roomba_state.child_frame_id = "base_link";
+                //map座標系からみたbase_link座標系の原点位置と方向の格納
+                roomba_state.transform.translation.x = map_to_roomba_x;
+                roomba_state.transform.translation.y = map_to_roomba_y;
+                roomba_state.transform.translation.z = 0;
+                roomba_state.transform.rotation = map_to_roomba_quat;
+                //tf情報をbroadcast(座標系の設定)
+                roomba_state_broadcaster.sendTransform(roomba_state);
+            }
+            catch(tf::TransformException &ex){
+                ROS_ERROR("%s", ex.what());
+                ros::Duration(1.0).sleep();
+            }
             create_p_pose_array_from_p_array(p_array);
             p_pose_array_pub.publish(p_pose_array);
             mcl_pose_pub.publish(mcl_pose);
@@ -330,14 +348,12 @@ Localizer::Particle::Particle(Localizer* localizer)
 
 void Localizer::Particle::set_p(double x, double y, double yaw, double x_sigma, double y_sigma, double yaw_sigma)
 {
-    do{
-        p_pose.pose.position.x = mcl->gaussian(x, x_sigma);
-        p_pose.pose.position.y = mcl->gaussian(y, y_sigma);
-        yaw = mcl->adjust_yaw(mcl->gaussian(yaw, yaw_sigma));
-        quaternionTFToMsg(tf::createQuaternionFromYaw(yaw),p_pose.pose.orientation);
-    }while(mcl->map.data[mcl->xy_to_map_index(p_pose.pose.position.x, p_pose.pose.position.y)] != 0);
+    p_pose.pose.position.x = mcl->gaussian(x, x_sigma);
+    p_pose.pose.position.y = mcl->gaussian(y, y_sigma);
+    yaw = mcl->adjust_yaw(mcl->gaussian(yaw, yaw_sigma));
+    quaternionTFToMsg(tf::createQuaternionFromYaw(yaw),p_pose.pose.orientation);
 }
-/*
+
 double Localizer::create_yaw_from_msg(geometry_msgs::Quaternion q)
 {
     double roll, pitch, yaw;
@@ -345,7 +361,7 @@ double Localizer::create_yaw_from_msg(geometry_msgs::Quaternion q)
     tf::Matrix3x3(quaternion).getRPY(roll, pitch, yaw);
     return yaw;
 }
-*/
+
 double Localizer::substract_yawA_from_yawB(double yawA, double yawB)
 {
     double dyaw = yawB - yawA;
@@ -367,16 +383,19 @@ void Localizer::Particle::p_move(double dtrans, double drot1, double drot2)
 
 }
 
-double Localizer::calc_w(geometry_msgs::PoseStamped pose)
+double Localizer::calc_w(geometry_msgs::PoseStamped &pose)
 {
     double weight = 0;
     double angle_increment =laser.angle_increment;
     double angle_min = laser.angle_min;
+    double x = pose.pose.position.x;
+    double y = pose.pose.position.y;
+    double yaw = create_yaw_from_msg(pose.pose.orientation);
     for(int i=0, size=laser.ranges.size(); i<size; i+=step_count){
         if(laser.ranges[i] > 0.2){
             double angle = i * angle_increment + angle_min;
-            double dist_to_wall = dist_from_p_to_wall(pose.pose.position.x, pose.pose.position.y, create_yaw_from_msg(pose.pose.orientation) + angle);
-            weight += gaussian(laser.ranges[i], laser.ranges[i] * laser_noise, dist_to_wall);
+            double dist_to_wall = dist_from_p_to_wall(x, y, yaw + angle, laser.ranges[i]);
+            weight += gaussian(laser.ranges[i], laser.ranges[i] * laser_noise_ratio, dist_to_wall);
         }
     }
     return weight;
