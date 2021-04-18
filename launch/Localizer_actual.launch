@@ -24,7 +24,7 @@
         <param name="expansion_x_speed" value="1.0" type="double"/>
         <param name="expansion_y_speed" value="1.0" type="double"/>
         <param name="expansion_yaw_speed" value="2.0" type="double"/>
-        <param name="alpha_th" value="1.4" type="double"/>
+        <param name="alpha_th" value="1.8" type="double"/>
         <param name="reset_limit" value="200" type="int"/>
 
     </node>
