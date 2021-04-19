@@ -79,24 +79,6 @@ void AStarPath::thick_wall()
         {
             for(int j=5;j<col-5;j++)
             {
-                /*if(i>2282 && i<2287 && j>1547 && j<1893)
-                {
-                    if(map_grid_copy[i][j] == 100)
-                    {
-                        map_grid_copy[i][j] = 0;
-                        map_grid[i][j] = 0;
-                    }
-                }
-
-                if(i>2282 && i<2287 && j>1547 && j<1893)
-                {
-                    if(map_grid[i][j] == 100)
-                    {
-                        map_grid_copy[i][j] = 0;
-                        map_grid[i][j] = 0;
-                    }
-                }*/
-
                 if(map_grid_copy[i][j]==100)
                 {
                     map_grid[i+1][j]=100;
@@ -147,10 +129,10 @@ void AStarPath::thick_wall()
 
         }*/
 
-        map_grid[1550][2000] = 80;
-        map_grid[2210][2000] = 80;
-        map_grid[1550][2285] = 80;
-        map_grid[2210][2285] = 80;
+        // map_grid[1550][2000] = 80;
+        // map_grid[2210][2000] = 80;
+        // map_grid[1550][2285] = 80;
+        // map_grid[2210][2285] = 80;
 
         res = the_map.info.resolution;
         std::cout<<res<<std::endl;
@@ -419,14 +401,14 @@ void AStarPath::process()
             //std::cout<<"ok1"<<std::endl;
             thick_wall();
             set_goal();
-            if(!heu_checker)
-            {
-                for(int i=0;i<5;i++)
-                {
-                    make_heuristic(i+1);
-                }
-                heu_checker = true;
-            }
+            // if(!heu_checker)
+            // {
+            //     for(int i=0;i<5;i++)
+            //     {
+            //         make_heuristic(i+1);
+            //     }
+            //     heu_checker = true;
+            // }
             A_star();
             std::cout<<"ok2"<<std::endl;
             pub_path.publish(global_path);

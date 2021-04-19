@@ -39,12 +39,14 @@ void LocalGoal::mcl_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 void LocalGoal::select_goal()
 {
     float distance = sqrt(pow(current_pose.pose.position.x - local_goal.pose.position.x , 2) + pow(current_pose.pose.position.y - local_goal.pose.position.y , 2));
-    if(distance < 10) goal_num += 20; //ちょっと先に新しいゴールを設置
+    if(distance < 10)
     {
+        goal_num += 20; //ちょっと先に新しいゴールを設置
         if(goal_num < global_path.poses.size()) local_goal = global_path.poses[goal_num];
         else
         {
             goal_num = global_path.poses.size()-1;
+            local_goal = global_path.poses[goal_num];
         }
     }
 
