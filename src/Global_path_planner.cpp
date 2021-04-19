@@ -9,7 +9,7 @@ AStarPath::AStarPath():private_nh("")
     private_nh.param("heu_checker",heu_checker,{false});
     private_nh.param("path_checker",path_checker,{false});
     sub_map = nh.subscribe("/map",10,&AStarPath::map_callback,this);
-    pub_map = nh.advertise<nav_msgs::OccupancyGrid>("/map",1);
+    // pub_map = nh.advertise<nav_msgs::OccupancyGrid>("/fixed_map",1);
     pub_path = nh.advertise<nav_msgs::Path>("/path",1);
     //pub_goal = nh.advertise<geometry_msgs::PoseStamped>("/mini_goal",1);
 
@@ -155,7 +155,7 @@ void AStarPath::thick_wall()
         std::cout<<"wall"<<std::endl;
         //std::cout<<count<<std::endl;
 
-        pub_map.publish(the_map);
+        // pub_map.publish(the_map);
         wall_checker = true;
     }
 

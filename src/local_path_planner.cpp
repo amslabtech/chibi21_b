@@ -18,7 +18,10 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
     private_nh.param("COST_HEADING_OBS_GAIN",COST_HEADING_OBS_GAIN,{1.0});
     private_nh.param("PREDICT_TIME",PREDICT_TIME,{3.0});
     private_nh.param("USE_DUMMY_TOPIC",USE_DUMMY_TOPIC,{false});
-    // private_nh.param("",,{});
+    private_nh.param("flag_scan",flag_scan,{false});
+    private_nh.param("flag_mcl_pose",flag_mcl_pose,{false});
+    private_nh.param("flag_local_goal",flag_local_goal,{false});
+    private_nh.param("flag_odom",flag_odom,{false});
 
     sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
     sub_estimated_pose=nh.subscribe("/mcl_pose",100,&DynamicWindowApproach::estimated_pose_callback,this);
@@ -36,7 +39,9 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
 
 void DynamicWindowApproach::scan_callback(const sensor_msgs::LaserScan::ConstPtr& msg)
 {
+
     scan=*msg;
+    flag_scan=true;
 }
 
 void DynamicWindowApproach::estimated_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -46,6 +51,7 @@ void DynamicWindowApproach::estimated_pose_callback(const geometry_msgs::PoseSta
     current_state.x=estimated_pose.pose.position.x;
     current_state.y=estimated_pose.pose.position.y;
     current_state.yaw=tf::getYaw(estimated_pose.pose.orientation);
+    flag_mcl_pose=true;
 }
 
 void DynamicWindowApproach::local_goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -57,6 +63,7 @@ void DynamicWindowApproach::local_goal_callback(const geometry_msgs::PoseStamped
     local_goal.yaw=tf::getYaw(_local_goal.pose.orientation);
     local_goal.velocity=LINEAR_SPEED_MAX;
     local_goal.omega=0.0;
+    flag_local_goal=true;
 }
 
 void DynamicWindowApproach::odometry_callback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -65,6 +72,7 @@ void DynamicWindowApproach::odometry_callback(const nav_msgs::Odometry::ConstPtr
 
     current_state.velocity=odometry.twist.twist.linear.x;
     current_state.omega=odometry.twist.twist.angular.z;
+    flag_odom=true;
 }
 
 void DynamicWindowApproach::twist_to_odometry_callback(const geometry_msgs::Twist::ConstPtr& msg)
@@ -138,7 +146,10 @@ void DynamicWindowApproach::calc_trajectory()
             // double cost_obstacle_min=calc_cost_obstacle(traj);
             double cost_heading_obs=0.0;
             if(USE_DUMMY_TOPIC) cost_heading_obs=calc_cost_heading_obs(map_frame_obs_list,w*omega_direction);
-            else  cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
+            else{
+                scan_to_obs();
+                cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
+            }
             double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle+COST_HEADING_OBS_GAIN*cost_heading_obs;
 
             if(cost_sum<=cost_min){
@@ -160,10 +171,11 @@ void DynamicWindowApproach::calc_trajectory()
         // best_velocity=0.0;
         // best_omega=1.0;
     // }
-    // ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || cost_min = "<<cost_min<<" || cost_heading_min = "<<cost_heading_min<<" || cost_velocity_min = "<<cost_velocity_min<<" || count = "<<count);
-    ROS_INFO_STREAM("best_omega = "<<best_omega);
+    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" ||  count = "<<count);
+    // ROS_INFO_STREAM("best_omega = "<<best_omega);
 
     roomba_500driver_meiji::RoombaCtrl cmd_vel;
+    cmd_vel.mode=11;
     cmd_vel.cntl.linear.x=best_velocity;
     cmd_vel.cntl.angular.z=best_omega;
     pub_roomba_ctrl.publish(cmd_vel);
@@ -298,12 +310,15 @@ void DynamicWindowApproach::process()
     ros::Rate loop_rate(1/DT);
     init();
     while(ros::ok()){
+            // ROS_INFO_STREAM("scan = "<<flag_scan<<" | goal = "<<flag_local_goal<<" | mcl = "<<flag_mcl_pose<<" | odom= "<<flag_odom);
+        if(flag_scan&&flag_local_goal&&flag_mcl_pose&&flag_odom){
         // ROS_INFO_STREAM("current_state.x = "<<current_state.x<<" || current_state.y = "<<current_state.y<<" || current_state.yaw = "<<current_state.yaw);
-        calc_dynamic_window();
-        calc_trajectory();
+            calc_dynamic_window();
+            calc_trajectory();
+        }
+            ros::spinOnce();
+            loop_rate.sleep();
 
-        ros::spinOnce();
-        loop_rate.sleep();
         // ROS_INFO_STREAM("loop time:"<<ros::Time::now().toSec()<<"[s]");
     }
 }

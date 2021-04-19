@@ -43,6 +43,10 @@ class DynamicWindowApproach
         double DT;
         std::string ROBOT_FRAME;
         bool USE_DUMMY_TOPIC;
+        bool flag_scan;
+        bool flag_local_goal;
+        bool flag_mcl_pose;
+        bool flag_odom;
 
         //roomba's spec
         double LINEAR_SPEED_MAX;

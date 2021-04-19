@@ -29,19 +29,17 @@ void LocalGoal::global_path_callback(const nav_msgs::Path::ConstPtr &msg)
 
 void LocalGoal::mcl_callback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
-    if(!mcl_checker)
-    {
-        current_pose = *msg;
-        mcl_checker = true;
-    }
+    current_pose = *msg;
+    mcl_checker = true;
 }
 
 void LocalGoal::select_goal()
 {
     float distance = sqrt(pow(current_pose.pose.position.x - local_goal.pose.position.x , 2) + pow(current_pose.pose.position.y - local_goal.pose.position.y , 2));
-    if(distance < 10)
+    ROS_INFO_STREAM("distance = "<<distance<<" || x = "<<current_pose.pose.position.x<<" || y = "<<current_pose.pose.position.y);
+    if(distance < 10.0)
     {
-        goal_num += 20; //ちょっと先に新しいゴールを設置
+        goal_num += 10; //ちょっと先に新しいゴールを設置
         if(goal_num < global_path.poses.size()) local_goal = global_path.poses[goal_num];
         else
         {
@@ -61,6 +59,7 @@ void LocalGoal::process()
         {
             select_goal();
             std::cout<<"local_goal ok"<<std::endl;
+            local_goal.header.frame_id = "map";
             pub_local_goal.publish(local_goal);
         }
 
