@@ -18,10 +18,10 @@ DynamicWindowApproach::DynamicWindowApproach():private_nh("~")
     private_nh.param("COST_HEADING_OBS_GAIN",COST_HEADING_OBS_GAIN,{1.0});
     private_nh.param("PREDICT_TIME",PREDICT_TIME,{3.0});
     private_nh.param("USE_DUMMY_TOPIC",USE_DUMMY_TOPIC,{false});
-    private_nh.param("flag_scan",flag_scan,{true});
-    private_nh.param("flag_mcl_pose",flag_mcl_pose,{true});
-    private_nh.param("flag_local_goal",flag_local_goal,{true});
-    private_nh.param("flag_odom",flag_odom,{true});
+    private_nh.param("flag_scan",flag_scan,{false});
+    private_nh.param("flag_mcl_pose",flag_mcl_pose,{false});
+    private_nh.param("flag_local_goal",flag_local_goal,{false});
+    private_nh.param("flag_odom",flag_odom,{false});
 
     sub_scan=nh.subscribe("/scan",100,&DynamicWindowApproach::scan_callback,this);
     sub_estimated_pose=nh.subscribe("/mcl_pose",100,&DynamicWindowApproach::estimated_pose_callback,this);
@@ -147,8 +147,8 @@ void DynamicWindowApproach::calc_trajectory()
                 double cost_heading_obs=0.0;
                 if(USE_DUMMY_TOPIC) cost_heading_obs=calc_cost_heading_obs(map_frame_obs_list,w*omega_direction);
                 else{
-                    // scan_to_obs();
-                    // cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
+                    scan_to_obs();
+                    cost_heading_obs=calc_cost_heading_obs(obs_list,w*omega_direction);
                 }
                 double cost_sum=COST_HEADING_GAIN*cost_heading+COST_VELOCITY_GAIN*cost_velocity+COST_OBSTACLE_GAIN*cost_obstacle+COST_HEADING_OBS_GAIN*cost_heading_obs;
 
@@ -165,13 +165,13 @@ void DynamicWindowApproach::calc_trajectory()
                 count++;
             }
         }
-        if(count > RESOLUTION_VELOCITY_NUM*RESOLUTION_OMEGA_NUM) break;
+        if(count > RESOLUTION_VELOCITY_NUM*RESOLUTION_OMEGA_NUM*100) break;
     }
     // if(cost_obstacle_min>=1e3){
         // best_velocity=0.0;
         // best_omega=1.0;
     // }
-    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" ||  count = "<<count);
+    ROS_INFO_STREAM("best_velocity = "<<best_velocity<<" || best_omega = "<<best_omega<<" ||  count = "<<count);
     // ROS_INFO_STREAM("best_omega = "<<best_omega);
 
     roomba_500driver_meiji::RoombaCtrl cmd_vel;
@@ -369,20 +369,20 @@ void DynamicWindowApproach::init()
     obs_list.clear();
     map_frame_obs_list={
         {5.0,-5.0},
-        {5.0,-4.5},
-        {5.0,-4.0},
-        {5.0,-3.5},
-        {5.0,-3.0},
-        {5.0,-2.5},
-        {5.0,-2.0},
-        {5.0,-1.5},
-        {5.0,-1.0},
-        {5.0,0.0},
-        {5.0,1.0},
-        {5.0,2.0},
-        {5.0,3.0},
-        {5.0,4.0},
-        {5.0,5.0}
+        // {5.0,-4.5},
+        // {5.0,-4.0},
+        // {5.0,-3.5},
+        // {5.0,-3.0},
+        // {5.0,-2.5},
+        // {5.0,-2.0},
+        // {5.0,-1.5},
+        // {5.0,-1.0},
+        // {5.0,0.0},
+        // {5.0,1.0},
+        // {5.0,2.0},
+        // {5.0,3.0},
+        // {5.0,4.0},
+        // {5.0,5.0}
     };
 }
 

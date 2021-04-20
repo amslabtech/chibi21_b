@@ -28,19 +28,19 @@
         <param name="reset_limit" value="200" type="int"/>
 
     </node>
-    <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner" output="screen">
+    <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner">
         <param name="RESOLUTION_VELOCITY_NUM" value="5"/>
         <param name="RESOLUTION_OMEGA_NUM" value="10"/>
         <param name="DT" value="0.05"/>
         <param name="ROBOT_FRAME" value="map"/>
-        <param name="LINEAR_SPEED_MAX" value="0.7"/>
+        <param name="LINEAR_SPEED_MAX" value="0.5"/>
         <param name="LINEAR_SPEED_MIN" value="0.1"/>
-        <param name="ANGULAR_SPEED_MAX" value="2.0"/>
-        <param name="LINEAR_ACCL" value="2.0"/>
-        <param name="ANGULAR_ACCL" value="5.0"/>
-        <param name="COST_HEADING_GAIN" value="10.0"/>
-        <param name="COST_VELOCITY_GAIN" value="0.8"/>
-        <param name="COST_OBSTACLE_GAIN" value="1.3"/>
+        <param name="ANGULAR_SPEED_MAX" value="4.0"/>
+        <param name="LINEAR_ACCL" value="3.0"/>
+        <param name="ANGULAR_ACCL" value="8.0"/>
+        <param name="COST_HEADING_GAIN" value="6.0"/>
+        <param name="COST_VELOCITY_GAIN" value="0.35"/>
+        <param name="COST_OBSTACLE_GAIN" value="2.5"/>
         <param name="COST_HEADING_OBS_GAIN" value="0.0"/>
         <param name="PREDICT_TIME" value="3.0"/>
         <param name="ROBOT_RADIUS" value="1.0"/>
@@ -48,7 +48,7 @@
         <param name="USE_DUMMY_TOPIC" value="false"/>
     </node>
     <node pkg="chibi21_b" type="Global_path_planner" name="Global_path_planner"/>
-    <node pkg="chibi21_b" type="local_goal_creator" name="local_goal_creator" />
+    <node pkg="chibi21_b" type="local_goal_creator" name="local_goal_creator" output="screen"/>
 
     <node name="urg_node" pkg="urg_node" type="urg_node">
         <param name="serial_port" value="/dev/ttyACM0"/>
