@@ -210,12 +210,12 @@ double DynamicWindowApproach::calc_cost_heading(State& traj_last_state)
     // ROS_INFO_STREAM("traj_last_state.x = "<<traj_last_state.x<<" || traj_last_state.y = "<<traj_last_state.y);
     // ROS_INFO_STREAM("angle_diff = "<<angle_diff<<" || angle_to_goal = "<<angle_to_goal<<" || current_state.yaw = "<<current_state.yaw);
 
-    return std::max(std::abs(angle_diff),0.0);
+    return std::max(std::abs(angle_diff),0.0)/M_PI;
 }
 
 double DynamicWindowApproach::calc_cost_velocity(double velocity,double omega)
 {
-    return std::max(LINEAR_SPEED_MAX-velocity,0.0);
+    return std::max(LINEAR_SPEED_MAX-velocity,0.0)/LINEAR_SPEED_MAX;
 }
 
 double DynamicWindowApproach::calc_cost_obstacle(std::vector<State>& traj)
@@ -294,14 +294,17 @@ void DynamicWindowApproach::scan_to_obs()
 {
     if(!USE_DUMMY_TOPIC) obs_list.clear();
     double angle=scan.angle_min;
+    int count=0;
     for(auto r : scan.ranges){
-        if(r>0.2){
-            double x=r*std::cos(angle);
-            double y=r*std::sin(angle);
+        if((r<0.2)||(10<=count&&count<=70)||(count<=290&&count<=350)||(730<=count&&count<=790)||(1010<=count&&count<=1070)){
+            double x=r*std::cos(scan.angle_min+scan.angle_increment*count);
+            double y=r*std::sin(scan.angle_min+scan.angle_increment*count);
             std::vector<double> obs_state={x,y};
             obs_list.push_back(obs_state);
-            angle+=scan.angle_increment;
+            visualize_obs(x,y,pub_obs);
+            // angle+=scan.angle_increment;
         }
+        count++;
     }
 }
 
