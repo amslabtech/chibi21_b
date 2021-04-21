@@ -293,18 +293,19 @@ void DynamicWindowApproach::map_to_robot_frame(double position_map_x, double pos
 void DynamicWindowApproach::scan_to_obs()
 {
     if(!USE_DUMMY_TOPIC) obs_list.clear();
+
     double angle=scan.angle_min;
-    int count=0;
+    double offset=10.0/180.0*M_PI;
     for(auto r : scan.ranges){
-        if((r<0.2)||(10<=count&&count<=70)||(count<=290&&count<=350)||(730<=count&&count<=790)||(1010<=count&&count<=1070)){
-            double x=r*std::cos(scan.angle_min+scan.angle_increment*count);
-            double y=r*std::sin(scan.angle_min+scan.angle_increment*count);
+        if((r>0.1)&&!((-1.0*(3.0/4.0*M_PI+offset)<=angle&&angle<=(-1.0*(3.0/4.0*M_PI-offset)))||((-1.0*(1.0/4.0*M_PI+offset))<=angle&&angle<=(-1.0*(1.0/4.0*M_PI-offset)))||((1.0/4.0*M_PI-offset)<=angle&&angle<=(1.0/4.0*M_PI+offset))||((3.0/4.0*M_PI-offset)<=angle&&angle<=(3.0/4.0*M_PI+offset)))){
+            double x=r*std::cos(angle);
+            double y=r*std::sin(angle);
             std::vector<double> obs_state={x,y};
             obs_list.push_back(obs_state);
             visualize_obs(x,y,pub_obs);
             // angle+=scan.angle_increment;
         }
-        count++;
+        angle+=scan.angle_increment;
     }
 }
 
