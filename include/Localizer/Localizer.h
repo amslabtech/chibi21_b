@@ -61,7 +61,7 @@ class Localizer
         double move_noise_ratio;
         double laser_noise_ratio;
         double search_range;
-        int step_count;
+        int laser_step;
         double alpha_slow_th;
         double alpha_fast_th;
         double reset_x_sigma;
@@ -70,7 +70,7 @@ class Localizer
         double expansion_x_speed;
         double expansion_y_speed;
         double expansion_yaw_speed;
-        double alpha_th;
+        double estimated_pose_w_th;
         double reset_limit;
 
         double alpha = 0;
