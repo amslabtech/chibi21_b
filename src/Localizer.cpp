@@ -16,7 +16,7 @@ Localizer::Localizer():private_nh("~")
     private_nh.getParam("move_noise_ratio", move_noise_ratio);
     private_nh.getParam("search_range", search_range);
     private_nh.getParam("laser_noise_ratio", laser_noise_ratio);
-    private_nh.getParam("step_count", step_count);
+    private_nh.getParam("laser_step", laser_step);
     private_nh.getParam("alpha_slow_th", alpha_slow_th);
     private_nh.getParam("alpha_fast_th", alpha_fast_th);
     private_nh.getParam("reset_x_sigma", reset_x_sigma);
@@ -25,7 +25,7 @@ Localizer::Localizer():private_nh("~")
     private_nh.getParam("expansion_x_speed", expansion_x_speed);
     private_nh.getParam("expansion_y_speed", expansion_y_speed);
     private_nh.getParam("expansion_yaw_speed", expansion_yaw_speed);
-    private_nh.getParam("alpha_th", alpha_th);
+    private_nh.getParam("estimated_pose_w_th", estimated_pose_w_th);
     private_nh.getParam("reset_limit", reset_limit);
 
 
@@ -209,7 +209,7 @@ void Localizer::observation_update()
         p.w = weight;
     }
     estimate_pose();
-    double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / step_count);
+    double estimated_pose_w = calc_w(mcl_pose) / (laser.ranges.size() / laser_step);
     if(alpha_slow == 0){
         alpha_slow = alpha;
     }
@@ -223,7 +223,7 @@ void Localizer::observation_update()
         alpha_fast += alpha_fast_th * (alpha - alpha_fast);
     }
 
-    if(estimated_pose_w > alpha_th || reset_count > reset_limit){
+    if(estimated_pose_w > estimated_pose_w_th || reset_count > reset_limit){
         reset_count = 0;
         adaptive_resampling();
     }
@@ -258,14 +258,11 @@ void Localizer::process()
 {
     //TF Broadcasterの実体化
     tf::TransformBroadcaster odom_state_broadcaster;
-    tf::TransformBroadcaster roomba_state_broadcaster;
 
     ros::Rate rate(hz);
     while(ros::ok()){
         if(map_get_ok && odometry_get_ok){
-            /*
             try{
-
                 //map座標で見たbase_linkの位置の取得
                 double map_to_base_x = mcl_pose.pose.position.x;
                 double map_to_base_y = mcl_pose.pose.position.y;
@@ -275,9 +272,9 @@ void Localizer::process()
                 double odom_to_base_y = current_odometry.pose.pose.position.y;
                 double odom_to_base_yaw = create_yaw_from_msg(current_odometry.pose.pose.orientation);
                 //map座標で見たodom座標の位置の取得
-                double map_to_odom_x = odom_to_base_x - map_to_base_x;
-                double map_to_odom_y = odom_to_base_y - map_to_base_y;
-                double map_to_odom_yaw =  substract_yawA_from_yawB(odom_to_base_yaw, map_to_base_yaw);
+                double map_to_odom_yaw = substract_yawA_from_yawB(odom_to_base_yaw, map_to_base_yaw);
+                double map_to_odom_x = map_to_base_x - odom_to_base_x * cos(map_to_odom_yaw) + odom_to_base_y * sin(map_to_odom_yaw);
+                double map_to_odom_y = map_to_base_y - odom_to_base_x * sin(map_to_odom_yaw) - odom_to_base_y * cos(map_to_odom_yaw);
                 geometry_msgs::Quaternion map_to_odom_quat;
                 quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
 
@@ -288,42 +285,12 @@ void Localizer::process()
                 //座標系mapとodomの指定
                 odom_state.header.frame_id = "map";
                 odom_state.child_frame_id = "odom";
-                //map座標系からみたbase_link座標系の原点位置と方向の格納
+                //map座標系からみたodom座標系の原点位置と方向の格納
                 odom_state.transform.translation.x = map_to_odom_x;
                 odom_state.transform.translation.y = map_to_odom_y;
-                odom_state.transform.translation.z = 0;
                 odom_state.transform.rotation = map_to_odom_quat;
                 //tf情報をbroadcast(座標系の設定)
                 odom_state_broadcaster.sendTransform(odom_state);
-            }
-            catch(tf::TransformException &ex){
-                ROS_ERROR("%s", ex.what());
-                ros::Duration(1.0).sleep();
-            }
-            */
-
-            try{
-
-                //map座標で見たbase_linkの位置の取得
-                double map_to_roomba_x = mcl_pose.pose.position.x;
-                double map_to_roomba_y = mcl_pose.pose.position.y;
-                geometry_msgs::Quaternion map_to_roomba_quat = mcl_pose.pose.orientation;
-                //quaternionTFToMsg(tf::createQuaternionFromYaw(map_to_odom_yaw), map_to_odom_quat);
-
-                //odom座標系の元となるodomの位置姿勢情報格納用変数の作成
-                geometry_msgs::TransformStamped roomba_state;
-                //現在時刻の格納
-                roomba_state.header.stamp = ros::Time::now();
-                //座標系mapとodomの指定
-                roomba_state.header.frame_id = "map";
-                roomba_state.child_frame_id = "base_link";
-                //map座標系からみたbase_link座標系の原点位置と方向の格納
-                roomba_state.transform.translation.x = map_to_roomba_x;
-                roomba_state.transform.translation.y = map_to_roomba_y;
-                roomba_state.transform.translation.z = 0;
-                roomba_state.transform.rotation = map_to_roomba_quat;
-                //tf情報をbroadcast(座標系の設定)
-                roomba_state_broadcaster.sendTransform(roomba_state);
             }
             catch(tf::TransformException &ex){
                 ROS_ERROR("%s", ex.what());
@@ -333,7 +300,6 @@ void Localizer::process()
             p_pose_array_pub.publish(p_pose_array);
             mcl_pose_pub.publish(mcl_pose);
         }
-
         ros::spinOnce();
         rate.sleep();
     }
@@ -391,7 +357,7 @@ double Localizer::calc_w(geometry_msgs::PoseStamped &pose)
     double x = pose.pose.position.x;
     double y = pose.pose.position.y;
     double yaw = create_yaw_from_msg(pose.pose.orientation);
-    for(int i=0, size=laser.ranges.size(); i<size; i+=step_count){
+    for(int i=0, size=laser.ranges.size(); i<size; i+=laser_step){
         if(laser.ranges[i] > 0.2){
             double angle = i * angle_increment + angle_min;
             double dist_to_wall = dist_from_p_to_wall(x, y, yaw + angle, laser.ranges[i]);
