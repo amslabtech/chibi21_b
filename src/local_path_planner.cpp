@@ -314,7 +314,7 @@ void DynamicWindowApproach::process()
     ros::Rate loop_rate(1/DT);
     init();
     while(ros::ok()){
-            // ROS_INFO_STREAM("scan = "<<flag_scan<<" | goal = "<<flag_local_goal<<" | mcl = "<<flag_mcl_pose<<" | odom= "<<flag_odom);
+            ROS_INFO_STREAM("scan = "<<flag_scan<<" | goal = "<<flag_local_goal<<" | mcl = "<<flag_mcl_pose<<" | odom= "<<flag_odom);
         if(flag_scan&&flag_local_goal&&flag_mcl_pose&&flag_odom){
         // ROS_INFO_STREAM("current_state.x = "<<current_state.x<<" || current_state.y = "<<current_state.y<<" || current_state.yaw = "<<current_state.yaw);
             calc_dynamic_window();

@@ -294,7 +294,6 @@ void Localizer::process()
             }
             catch(tf::TransformException &ex){
                 ROS_ERROR("%s", ex.what());
-                ros::Duration(1.0).sleep();
             }
             create_p_pose_array_from_p_array(p_array);
             p_pose_array_pub.publish(p_pose_array);

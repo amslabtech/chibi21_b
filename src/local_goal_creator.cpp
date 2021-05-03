@@ -37,7 +37,7 @@ void LocalGoal::select_goal()
 {
     float distance = sqrt(pow(current_pose.pose.position.x - local_goal.pose.position.x , 2) + pow(current_pose.pose.position.y - local_goal.pose.position.y , 2));
     // ROS_INFO_STREAM("distance = "<<distance<<" || x = "<<current_pose.pose.position.x<<" || y = "<<current_pose.pose.position.y);
-    if(distance < 3.0)
+    if(distance < 2.0)
     {
         goal_num += 3; //ちょっと先に新しいゴールを設置
         if(goal_num < global_path.poses.size()) local_goal = global_path.poses[goal_num];
@@ -47,6 +47,7 @@ void LocalGoal::select_goal()
             local_goal = global_path.poses[goal_num];
         }
     }
+    local_goal.pose.orientation.w = 1;
     ROS_INFO_STREAM("size = "<<global_path.poses.size()<<" || goal_num = "<<goal_num<<"distance = "<<distance);
 
 }
