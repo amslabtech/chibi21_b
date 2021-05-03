@@ -20,7 +20,7 @@ void LocalGoal::global_path_callback(const nav_msgs::Path::ConstPtr &msg)
     if(!global_path_checker)
     {
         global_path = *msg;
-        goal_num =300;
+        goal_num =150;
         local_goal = global_path.poses[goal_num];
         global_path_checker = true;
     }

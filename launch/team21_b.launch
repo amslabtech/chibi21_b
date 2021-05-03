@@ -5,12 +5,12 @@
     <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen"/>
     <node pkg="chibi21_b" type="Localizer" name="Localizer" output="screen">
         <param name="hz" value="10" type="int"/>
-        <param name="particle_number" value="500" type="int"/>
-        <param name="init_x" value="0.0" type="double"/>
+        <param name="particle_number" value="300" type="int"/>
+        <param name="init_x" value="-6.0" type="double"/>
         <param name="init_y" value="0.0" type="double"/>
         <param name="init_yaw" value="0.0" type="double"/>
-        <param name="init_x_sigma" value="0.5" type="double"/>
-        <param name="init_y_sigma" value="0.5" type="double"/>
+        <param name="init_x_sigma" value="1.0" type="double"/>
+        <param name="init_y_sigma" value="1.0" type="double"/>
         <param name="init_yaw_sigma" value="0.5" type="double"/>
         <param name="move_noise_ratio" value="0.1" type="double"/>
         <param name="laser_noise_ratio" value="0.1" type="double"/>
@@ -30,19 +30,19 @@
     </node>
     <node pkg="chibi21_b" name="local_path_planner" type="local_path_planner" output="screen">
         <param name="RESOLUTION_VELOCITY_NUM" value="5"/>
-        <param name="RESOLUTION_OMEGA_NUM" value="10"/>
+        <param name="RESOLUTION_OMEGA_NUM" value="7"/>
         <param name="DT" value="0.1"/>
         <param name="ROBOT_FRAME" value="map"/>
-        <param name="LINEAR_SPEED_MAX" value="0.5"/>
+        <param name="LINEAR_SPEED_MAX" value="0.7"/>
         <param name="LINEAR_SPEED_MIN" value="0.1"/>
         <param name="ANGULAR_SPEED_MAX" value="4.0"/>
         <param name="LINEAR_ACCL" value="3.0"/>
-        <param name="ANGULAR_ACCL" value="8.0"/>
-        <param name="COST_HEADING_GAIN" value="15.0"/>
+        <param name="ANGULAR_ACCL" value="10.0"/>
+        <param name="COST_HEADING_GAIN" value="1.0"/>
         <param name="COST_VELOCITY_GAIN" value="0.5"/>
-        <param name="COST_OBSTACLE_GAIN" value="0.7"/>
+        <param name="COST_OBSTACLE_GAIN" value="0.5"/>
         <param name="COST_HEADING_OBS_GAIN" value="0.0"/>
-        <param name="PREDICT_TIME" value="3.0"/>
+        <param name="PREDICT_TIME" value="1.5"/>
         <param name="ROBOT_RADIUS" value="1.0"/>
 
         <param name="USE_DUMMY_TOPIC" value="false"/>
