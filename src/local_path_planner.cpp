@@ -123,8 +123,8 @@ void DynamicWindowApproach::calc_trajectory()
     double best_omega=0.0;
 
     int count=0;
-    for(double v=dw.vel_min; v<=dw.vel_max; v+=resolution_velocity){
-        for(double w=dw.omega_max; w>=0.0; w-=resolution_omega){
+    for(double v=dw.vel_max; v>=dw.vel_min; v-=resolution_velocity){
+        for(double w=0.0; w<=dw.omega_max; w+=resolution_omega){
             for(double omega_direction=1.0; omega_direction>=-1.0; omega_direction-=2.0){
                 State state;
                 state.x=0.0;
@@ -297,7 +297,7 @@ void DynamicWindowApproach::scan_to_obs()
     double angle=scan.angle_min;
     double offset=10.0/180.0*M_PI;
     for(auto r : scan.ranges){
-        if((r>0.1&&r<5.0)&&!((-1.0*(3.0/4.0*M_PI+offset)<=angle&&angle<=(-1.0*(3.0/4.0*M_PI-offset)))||((-1.0*(1.0/4.0*M_PI+offset))<=angle&&angle<=(-1.0*(1.0/4.0*M_PI-offset)))||((1.0/4.0*M_PI-offset)<=angle&&angle<=(1.0/4.0*M_PI+offset))||((3.0/4.0*M_PI-offset)<=angle&&angle<=(3.0/4.0*M_PI+offset)))){
+        if((r>0.1)&&!((-1.0*(3.0/4.0*M_PI+offset)<=angle&&angle<=(-1.0*(3.0/4.0*M_PI-offset)))||((-1.0*(1.0/4.0*M_PI+offset))<=angle&&angle<=(-1.0*(1.0/4.0*M_PI-offset)))||((1.0/4.0*M_PI-offset)<=angle&&angle<=(1.0/4.0*M_PI+offset))||((3.0/4.0*M_PI-offset)<=angle&&angle<=(3.0/4.0*M_PI+offset)))){
             double x=r*std::cos(angle);
             double y=r*std::sin(angle);
             std::vector<double> obs_state={x,y};
