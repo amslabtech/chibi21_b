@@ -410,11 +410,8 @@ void AStarPath::process()
             //     heu_checker = true;
             // }
             A_star();
-            std::cout<<"ok2"<<std::endl;
             pub_path.publish(global_path);
-            std::cout<<"fin"<<std::endl;
             path_checker = true;
-
         }
         std::cout<<"FIN"<<std::endl;
         ros::spinOnce();

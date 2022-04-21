@@ -1,4 +1,6 @@
-<?xml version="1.0"?>
+ck_wall();                   //
+    set_goal();                     //decide goll
+    A_star();                       //A*process<?xml version="1.0"?>
 
 <launch>
 

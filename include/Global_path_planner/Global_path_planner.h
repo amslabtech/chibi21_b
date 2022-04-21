@@ -50,14 +50,14 @@ class AStarPath
         std::vector<std::vector<int>> map_grid; //2Dmap
         std::vector<std::vector<int>> map_grid_copy; //2Dmapcopy
 
-        std::vector<std::vector<int>> heuristic; //heuristic関数
+        std::vector<std::vector<int>> heuristic; //heuristic function
         //int dx;
         //int dy;
 
         std::vector<twod> goal; //set_goal
 
         std::vector<std::vector<open>> close_list;
-        std::vector<std::vector<open>> open_list;
+        std::vector<std::vector<open>> open_list; 
 
         float res;
 
@@ -74,7 +74,7 @@ class AStarPath
 
         int g;
         int h;
-        int f[4];
+        int f[4];       //h+g
 
         ftwod origin;//-100？？
         twod mom;//親
